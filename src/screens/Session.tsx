@@ -1,0 +1,475 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, kvGet, kvSet } from '../db/db';
+import type { Exercise, Machine, Session, SessionItem, SetEntry } from '../db/types';
+import { Chip, Icon, Sheet, Stepper, go, useNow, useSettings, useToast, NumInput, Check, Field } from '../ui/kit';
+import { CONVENTION_LABEL, describeSet, totalLoadNote } from '../ui/labels';
+import { configKey, deleteSet, discardSession, finishSession, previousPerformance, restState, saveSet, sessionTimes, togglePause, updateSet, estimateItemMin, type SetDraft } from '../lib/workout';
+import { formatDateIt, formatDuration } from '../lib/dates';
+import { fmtNum, uid } from '../lib/id';
+import { setUnsaved } from '../lib/pwa';
+import { proposedRir } from '../lib/progression';
+
+export interface FormState {
+  id: string;
+  kind: 'warmup' | 'working';
+  load: number | null;
+  loadPrefilledFrom: string | null; // es. "seduta del 2 nov" — solo indicazione
+  fullReps: number | null;
+  conform: 'all' | 'some' | 'unknown';
+  validReps: number | null;
+  rir: number | null;
+  rirUnknown: boolean;
+  pain: boolean;
+  painNote: string;
+  plannedPartials: number | null;
+  extraPartials: number | null;
+  assistedReps: number | null;
+  failedAttempts: number | null;
+  otherSide: number | null;
+  techIssue: boolean;
+  notes: string;
+}
+
+const emptyForm = (load: number | null, from: string | null, kind: 'warmup' | 'working' = 'working'): FormState => ({
+  id: uid(), kind, load, loadPrefilledFrom: from, fullReps: null, conform: 'all', validReps: null, rir: null, rirUnknown: false, pain: false,
+  painNote: '', plannedPartials: null, extraPartials: null, assistedReps: null, failedAttempts: null, otherSide: null, techIssue: false, notes: ''
+});
+
+const isDirty = (f: FormState) => f.fullReps != null || f.rir != null || f.rirUnknown || f.pain || !!f.notes || f.extraPartials != null || f.plannedPartials != null;
+
+function toDraft(f: FormState, s: Session, ex: Exercise, itemIndex: number): SetDraft {
+  const full = f.fullReps ?? 0;
+  return {
+    id: f.id, sessionId: s.id, exerciseId: ex.id, itemIndex, kind: f.kind, load: f.load, loadConvention: ex.loadConvention,
+    unilateral: ex.unilateral, romType: ex.romType, fullReps: full,
+    validReps: f.conform === 'all' ? full : f.conform === 'unknown' ? null : Math.min(f.validReps ?? 0, full),
+    fullRepsOtherSide: ex.unilateral ? f.otherSide : null,
+    plannedPartials: f.plannedPartials ?? 0, extraPartials: f.extraPartials ?? 0, assistedReps: f.assistedReps ?? 0, failedAttempts: f.failedAttempts ?? 0,
+    rir: f.rirUnknown ? null : f.rir, rirUnknown: f.rirUnknown, pain: f.pain, painNote: f.painNote, techIssue: f.techIssue, notes: f.notes
+  };
+}
+
+export function fromSet(s: SetEntry): FormState {
+  return {
+    id: s.id, kind: s.kind, load: s.load, loadPrefilledFrom: null, fullReps: s.fullReps,
+    conform: s.validReps == null ? 'unknown' : s.validReps === s.fullReps ? 'all' : 'some', validReps: s.validReps,
+    rir: s.rir, rirUnknown: s.rirUnknown, pain: s.pain, painNote: s.painNote, plannedPartials: s.plannedPartials || null, extraPartials: s.extraPartials || null,
+    assistedReps: s.assistedReps || null, failedAttempts: s.failedAttempts || null, otherSide: s.fullRepsOtherSide, techIssue: s.techIssue, notes: s.notes
+  };
+}
+
+export function SessionScreen() {
+  const session = useLiveQuery(() => db.sessions.where('status').equals('active').first(), []);
+  const loaded = session !== undefined;
+  const exercises = useLiveQuery(() => db.exercises.toArray(), []);
+  if (!loaded || !exercises) {
+    return <main className="main"><p className="muted">Caricamento…</p></main>;
+  }
+  if (!session) {
+    return (
+      <main className="main">
+        <h1>Nessuna seduta attiva</h1>
+        <button className="btn primary block" onClick={() => go('allenamento')}>Vai ad Allenamento</button>
+      </main>
+    );
+  }
+  return <ActiveSession session={session} exercises={new Map(exercises.map((e) => [e.id, e]))} />;
+}
+
+function ActiveSession({ session, exercises }: { session: Session; exercises: Map<string, Exercise> }) {
+  const settings = useSettings();
+  const toast = useToast();
+  const now = useNow(1000);
+  const sets = useLiveQuery(() => db.sets.where('sessionId').equals(session.id).sortBy('order'), [session.id]) ?? [];
+  const pain = useLiveQuery(() => db.pain.where('status').equals('active').first(), []);
+  const idx = Math.min(session.currentIndex, Math.max(0, session.items.length - 1));
+  const item: SessionItem | undefined = session.items[idx];
+  const ex = item ? exercises.get(item.exerciseId) : undefined;
+  const machine = useLiveQuery(async () => (ex?.machineId ? db.machines.get(ex.machineId) : undefined), [ex?.machineId]);
+  const ck = ex ? configKey(ex) : '';
+  const prev = useLiveQuery(async () => (ck ? previousPerformance(ck, session.id) : null), [ck, session.id]);
+  const accepted = useLiveQuery(async () => (ck ? (await kvGet<{ load: number; at: number } | null>(`acceptedLoad:${ck}`, null)) : null), [ck]);
+  const itemSets = sets.filter((s) => s.itemIndex === idx);
+  const working = itemSets.filter((s) => s.kind === 'working');
+  const times = sessionTimes(session, now);
+  const rest = restState(session, now);
+  const [sheet, setSheet] = useState<null | 'list' | 'finish' | 'add' | { edit: SetEntry }>(null);
+
+  // --- Bozza del modulo, persistita in IndexedDB e ripristinata dopo chiusura/blocco schermo ---
+  const draftKey = `draft:${session.id}:${idx}`;
+  // Lo stato del modulo è legato alla chiave della bozza: cambiando esercizio non si "trascina" il modulo precedente.
+  const [fs, setFs] = useState<{ key: string; form: FormState | null; loaded: boolean }>({ key: '', form: null, loaded: false });
+  const form = fs.key === draftKey ? fs.form : null;
+  const draftLoaded = fs.key === draftKey && fs.loaded;
+  const setForm = (f: FormState | null) => setFs({ key: draftKey, form: f, loaded: true });
+  const [saving, setSaving] = useState(false);
+  const lastSavedFor = useRef<string>('');
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const saved = await kvGet<FormState | null>(draftKey, null);
+      if (alive) setFs({ key: draftKey, form: saved, loaded: true });
+    })();
+    return () => { alive = false; };
+  }, [draftKey]);
+
+  // Prefill del carico (solo carico, con indicazione) quando non c'è bozza.
+  useEffect(() => {
+    if (!draftLoaded || form || !ex) return;
+    const lastHere = [...itemSets].reverse().find((s) => s.load != null);
+    if (lastHere) { setForm(emptyForm(lastHere.load, 'serie precedente di oggi')); return; }
+    if (prev === undefined || accepted === undefined) return;
+    if (accepted && (!prev || accepted.at > prev.startedAt)) { setForm(emptyForm(accepted.load, 'proposta accettata, da confermare')); return; }
+    const pw = prev?.sets.find((s) => s.kind === 'working' && s.load != null);
+    setForm(emptyForm(pw?.load ?? null, pw ? `seduta del ${formatDateIt(prev!.dateKey)}` : null));
+  }, [draftLoaded, form, ex, prev, accepted, itemSets.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!form || fs.key !== draftKey) return;
+    const dirty = isDirty(form);
+    setUnsaved('set-form', dirty);
+    const t = setTimeout(() => { kvSet(draftKey, form).catch(() => {}); }, 250);
+    return () => clearTimeout(t);
+  }, [form, draftKey, fs.key]);
+  useEffect(() => () => setUnsaved('set-form', false), []);
+
+  // --- Schermo acceso facoltativo (Wake Lock, dove supportato) ---
+  useEffect(() => {
+    if (!settings.keepAwake || !('wakeLock' in navigator)) return;
+    let lock: { release: () => Promise<void> } | null = null;
+    const req = async () => { try { lock = await (navigator as unknown as { wakeLock: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock.request('screen'); } catch { /* non supportato o negato */ } };
+    req();
+    const vis = () => { if (document.visibilityState === 'visible') req(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { document.removeEventListener('visibilitychange', vis); lock?.release().catch(() => {}); };
+  }, [settings.keepAwake]);
+
+  // --- Fine recupero: vibrazione/suono facoltativi, solo con app visibile ---
+  const notified = useRef<number>(0);
+  useEffect(() => {
+    if (!rest?.done || !session.rest || notified.current === session.rest.startedAt) return;
+    notified.current = session.rest.startedAt;
+    if (document.visibilityState !== 'visible') return;
+    if (settings.vibration && 'vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+    if (settings.sound) beep();
+  }, [rest?.done, session.rest, settings.vibration, settings.sound]);
+
+  const setIdx = async (i: number) => {
+    if (i < 0 || i >= session.items.length) return;
+    await db.sessions.update(session.id, { currentIndex: i });
+  };
+
+  const target = item ? `${item.sets ?? '?'} × ${item.repMin ?? '?'}${item.repMax != null && item.repMax !== item.repMin ? '–' + item.repMax : ''}` : '';
+  const setNo = working.length + 1;
+  const rirT = item?.rirTargets[working.length] ?? null;
+  const proposal = ex && item?.sets ? proposedRir(ex.policyClass, item.sets)[working.length] : null;
+  const loadStep = machine?.increments?.length ? Math.min(...machine.increments) : settings.loadStepKg;
+
+  const doSave = async () => {
+    if (!form || !ex || !item || saving) return;
+    if (form.fullReps == null) { toast({ text: 'Inserisci le ripetizioni complete (anche 0).', kind: 'error' }); return; }
+    if (form.conform === 'some' && (form.validReps == null || form.validReps > form.fullReps)) { toast({ text: 'Le ripetizioni conformi devono essere ≤ delle complete.', kind: 'error' }); return; }
+    setSaving(true);
+    try {
+      const draft = toDraft(form, session, ex, idx);
+      const { set, duplicate } = await saveSet(draft, ex, form.kind === 'working' ? item.restSec ?? 180 : 90);
+      // Conferma SOLO dopo il completamento della scrittura su IndexedDB
+      lastSavedFor.current = set.id;
+      const next = emptyForm(form.load, null, form.kind);
+      setForm(next);
+      await kvSet(draftKey, next);
+      setUnsaved('set-form', false);
+      if (!duplicate) {
+        toast({
+          text: `Serie salvata ✓ ${describeSet(set).split(' · ').slice(0, 2).join(' · ')}`,
+          actions: [
+            { label: 'Annulla', onClick: async () => { await deleteSet(set.id); toast({ text: 'Serie annullata' }); } },
+            { label: 'Modifica', onClick: () => setSheet({ edit: set }) }
+          ]
+        });
+      }
+    } catch (e) {
+      toast({ text: `Serie NON salvata: ${e instanceof Error ? e.message : String(e)}. I dati inseriti sono ancora nel modulo.`, kind: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remainingEstimate = useMemo(() => {
+    const left = session.items.slice(idx).filter((it) => !it.skipped).reduce((a, it) => a + estimateItemMin(it), 0);
+    return Math.round(left);
+  }, [session.items, idx]);
+
+  return (
+    <>
+      <main className="main with-bar">
+        <div className="row between">
+          <div className="grow">
+            <div className="eyebrow">{session.title}</div>
+            <div className="row small muted"><span className="num">Attiva {formatDuration(times.active)}</span><span>·</span><span className="num">Totale {formatDuration(times.total)}</span>{times.isPaused && <span className="badge warn">In pausa</span>}</div>
+          </div>
+          <button className="iconbtn" aria-label={times.isPaused ? 'Riprendi seduta' : 'Metti in pausa'} onClick={() => togglePause(session.id)}>{times.isPaused ? <Icon.play /> : <Icon.pause />}</button>
+          <button className="btn sm" onClick={() => setSheet('finish')}>Termina</button>
+        </div>
+        {session.timeLimitMin != null && (
+          <p className="small muted">Limite {session.timeLimitMin} min · stima residua ~{remainingEstimate} min{times.active / 60000 + remainingEstimate > session.timeLimitMin ? ' — oltre il limite: puoi saltare esercizi a bassa priorità dalla lista' : ''}</p>
+        )}
+        {pain && <div className="banner warn"><Icon.alert /><span className="small">Pausa per dolore attiva: nessun invito ad aumentare il carico. Se compaiono segnali d'allarme, interrompi. <a href="#/allenamento/dolore">Dettagli</a></span></div>}
+
+        {rest && (
+          <div className="card flat" aria-live="off">
+            <div className="row between">
+              <div>
+                <div className="eyebrow">Recupero</div>
+                <div className={`timer ${rest.done ? 'over' : ''}`}>{formatDuration(rest.elapsedMs)}</div>
+                <div className="small muted">programmato {formatDuration(rest.plannedMs)}{rest.done ? ' · completato' : ''}</div>
+              </div>
+              <button className="btn sm ghost" onClick={() => db.sessions.update(session.id, { rest: null })}>Nascondi</button>
+            </div>
+          </div>
+        )}
+
+        {!item || !ex ? (
+          <div className="card"><p>Nessun esercizio in questa seduta.</p><button className="btn block" onClick={() => setSheet('add')}><Icon.plus /> Aggiungi esercizio</button></div>
+        ) : (
+          <>
+            <div className="row between mt">
+              <button className="iconbtn" aria-label="Esercizio precedente" disabled={idx === 0} onClick={() => setIdx(idx - 1)}><Icon.left /></button>
+              <button className="btn ghost grow" onClick={() => setSheet('list')} aria-label="Elenco esercizi">
+                <span className="small muted">Esercizio {idx + 1} di {session.items.length}</span>
+              </button>
+              <button className="iconbtn" aria-label="Esercizio successivo" disabled={idx >= session.items.length - 1} onClick={() => setIdx(idx + 1)}><Icon.right /></button>
+            </div>
+            <h1 style={{ marginBottom: 4 }}>{ex.name}</h1>
+            <p className="small muted" style={{ marginTop: 0 }}>
+              {ex.aliases.length ? `“${ex.aliases.join('”, “')}” · ` : ''}{machine?.name ?? ex.equipment}{ex.variant ? ` · ${ex.variant}` : ''}
+              {item.skipped && <span className="badge warn"> saltato</span>}
+            </p>
+            {ex.toConfirm.length > 0 && <p className="small"><span className="badge warn">Da confermare</span> {ex.toConfirm[0]}{ex.toConfirm.length > 1 ? ` (+${ex.toConfirm.length - 1})` : ''}</p>}
+
+            <div className="card flat">
+              <div className="grid2">
+                <div>
+                  <div className="eyebrow">Riferimento</div>
+                  <div className="num"><strong>{target}</strong></div>
+                  <div className="small muted">
+                    {rirT ? `RIR target ${rirT.min === rirT.max ? rirT.min : `${rirT.min}–${rirT.max}`}` : proposal ? `RIR non impostato (policy proposta ${proposal.min === proposal.max ? proposal.min : `${proposal.min}–${proposal.max}`}, da confermare)` : 'RIR non impostato'}
+                  </div>
+                </div>
+                <div>
+                  <div className="eyebrow">Precedente</div>
+                  {prev ? (
+                    <>
+                      <div className="small"><strong>{formatDateIt(prev.dateKey)}</strong></div>
+                      <div className="small">{prev.sets.filter((s) => s.kind === 'working').map((s) => `${fmtNum(s.load, 2)}×${s.fullReps}${s.validReps != null && s.validReps !== s.fullReps ? ` (${s.validReps} conf.)` : ''}${s.rir != null ? ` R${s.rir}` : ''}${s.extraPartials ? ` +${s.extraPartials}p` : ''}`).join(', ') || '—'}</div>
+                    </>
+                  ) : <div className="small muted">Nessuna seduta con questa configurazione</div>}
+                </div>
+              </div>
+            </div>
+
+            {itemSets.length > 0 && (
+              <div className="card flat">
+                {itemSets.map((s) => (
+                  <div className="setline" key={s.id}>
+                    <div className="small"><strong>{s.kind === 'warmup' ? 'Risc.' : `Serie ${itemSets.filter((x) => x.kind === 'working' && x.order <= s.order).length}`}</strong> {describeSet(s)}{s.pain && <span className="badge danger"> dolore</span>}</div>
+                    <button className="iconbtn" aria-label="Modifica serie" onClick={() => setSheet({ edit: s })}><Icon.edit /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {form && (
+              <SetForm
+                form={form} setForm={setForm} ex={ex} machine={machine} loadStep={loadStep} title={form.kind === 'warmup' ? 'Riscaldamento' : `Serie ${setNo}${item.sets ? ` di ${item.sets}` : ''}`}
+                repStart={item.repMin}
+              />
+            )}
+          </>
+        )}
+      </main>
+      {item && ex && form && (
+        <div className="bar-bottom">
+          <div>
+            <button className="btn primary xl block" disabled={saving} onClick={doSave} aria-busy={saving}>
+              {saving ? 'Salvataggio…' : 'Salva serie'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sheet === 'list' && (
+        <Sheet title="Esercizi della seduta" onClose={() => setSheet(null)}>
+          <ul className="list">
+            {session.items.map((it, i) => {
+              const e = exercises.get(it.exerciseId);
+              const done = sets.filter((s) => s.itemIndex === i && s.kind === 'working').length;
+              return (
+                <li key={i} className="row between">
+                  <button className="listbtn grow" onClick={() => { setIdx(i); setSheet(null); }}>
+                    <span><strong>{e?.name ?? it.exerciseId}</strong><br /><span className="small muted">{done}/{it.sets ?? '?'} serie · ~{Math.round(estimateItemMin(it))} min{it.skipped ? ' · saltato' : ''}</span></span>
+                    {i === idx && <span className="badge accent">attuale</span>}
+                  </button>
+                  <button className="btn sm" onClick={() => db.sessions.update(session.id, { items: session.items.map((x, j) => (j === i ? { ...x, skipped: !x.skipped } : x)) })}>{it.skipped ? 'Ripristina' : 'Salta'}</button>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="small muted">Saltare un esercizio non è un fallimento e non crea "volume da recuperare".</p>
+          <button className="btn block" onClick={() => setSheet('add')}><Icon.plus /> Aggiungi esercizio</button>
+        </Sheet>
+      )}
+      {sheet === 'add' && <AddExerciseSheet session={session} exercises={exercises} onClose={() => setSheet(null)} />}
+      {sheet === 'finish' && <FinishSheet session={session} sets={sets} onClose={() => setSheet(null)} />}
+      {sheet && typeof sheet === 'object' && ex && (
+        <EditSetSheet set={sheet.edit} ex={exercises.get(sheet.edit.exerciseId) ?? ex} loadStep={loadStep} onClose={() => setSheet(null)} />
+      )}
+    </>
+  );
+}
+
+export function SetForm({ form, setForm, ex, machine, loadStep, title, repStart }: {
+  form: FormState; setForm: (f: FormState) => void; ex: Exercise; machine: Machine | null | undefined; loadStep: number; title: string; repStart: number | null;
+}) {
+  const up = (p: Partial<FormState>) => setForm({ ...form, ...p });
+  const note = totalLoadNote(ex.loadConvention, form.load, machine);
+  return (
+    <section className="card" aria-label={title}>
+      <div className="row between">
+        <h3 className="mb0">{title}</h3>
+        <div className="chips">
+          <Chip on={form.kind === 'working'} onClick={() => up({ kind: 'working' })}>Allenante</Chip>
+          <Chip on={form.kind === 'warmup'} onClick={() => up({ kind: 'warmup' })}>Riscald.</Chip>
+        </div>
+      </div>
+      <div className="col mt">
+        <Stepper label={<>Carico <span className="small muted">{CONVENTION_LABEL[ex.loadConvention]}</span></>} value={form.load} step={loadStep} decimals
+          onChange={(v) => up({ load: v, loadPrefilledFrom: null })}
+          extra={form.loadPrefilledFrom ? <span className="badge accent small">precompilato: {form.loadPrefilledFrom}</span> : null} />
+        {note && <p className="small muted" style={{ marginTop: -4 }}>{note}</p>}
+        <Stepper label={<>Ripetizioni complete{ex.unilateral ? ' (per lato)' : ''} <span className="small muted">al ROM pianificato</span></>} value={form.fullReps} startAt={repStart}
+          onChange={(v) => up({ fullReps: v == null ? null : Math.round(v) })} />
+        <div>
+          <div className="stepper-label"><span>Di cui conformi alla tecnica</span></div>
+          <div className="chips">
+            <Chip on={form.conform === 'all'} onClick={() => up({ conform: 'all' })}>Tutte</Chip>
+            <Chip on={form.conform === 'some'} onClick={() => up({ conform: 'some', validReps: form.validReps ?? form.fullReps })}>Non tutte</Chip>
+            <Chip on={form.conform === 'unknown'} onClick={() => up({ conform: 'unknown' })}>Non valutato</Chip>
+          </div>
+          {form.conform === 'some' && <div className="mt"><Stepper label="Ripetizioni conformi" value={form.validReps} onChange={(v) => up({ validReps: v == null ? null : Math.round(v) })} /></div>}
+        </div>
+        <div>
+          <div className="stepper-label"><span>RIR <span className="small muted">ripetizioni conformi ancora possibili</span></span></div>
+          <div className="chips" role="group" aria-label="RIR">
+            {[0, 1, 2, 3, 4, 5].map((r) => <Chip key={r} on={!form.rirUnknown && form.rir === r} onClick={() => up({ rir: form.rir === r && !form.rirUnknown ? null : r, rirUnknown: false })} label={r === 5 ? 'RIR 5 o più' : `RIR ${r}`}>{r === 5 ? '5+' : r}</Chip>)}
+            <Chip on={form.rirUnknown} onClick={() => up({ rirUnknown: !form.rirUnknown, rir: null })}>Non so</Chip>
+          </div>
+          {form.rir == null && !form.rirUnknown && <p className="small muted">Non inserito: resta vuoto, non vale 0.</p>}
+        </div>
+        <div className="row wrap">
+          <Chip danger on={form.pain} onClick={() => up({ pain: !form.pain })}><Icon.alert /> Dolore</Chip>
+        </div>
+        {form.pain && (
+          <div className="card danger flat">
+            <Field label="Dove / come (facoltativo)"><input value={form.painNote} onChange={(e) => up({ painNote: e.target.value })} /></Field>
+            <p className="small">Con dolore l'app non propone aumenti. Considera di interrompere o modificare l'esercizio. Perdita di sensibilità perineale, nuove alterazioni di vescica/intestino o debolezza importante alle gambe: valutazione medica urgente.</p>
+          </div>
+        )}
+        <details>
+          <summary>Dettagli serie</summary>
+          <div className="col">
+            {ex.unilateral && <NumInput label="Altro lato, se diverso" value={form.otherSide} onChange={(v) => up({ otherSide: v == null ? null : Math.round(v) })} decimals={false} />}
+            <div className="grid2">
+              <NumInput label="Parziali pianificate" hint="protocollo separato" value={form.plannedPartials} onChange={(v) => up({ plannedPartials: v })} decimals={false} />
+              <NumInput label="Parziali extra" hint="dopo il limite, non contano" value={form.extraPartials} onChange={(v) => up({ extraPartials: v })} decimals={false} />
+              <NumInput label="Assistite" value={form.assistedReps} onChange={(v) => up({ assistedReps: v })} decimals={false} />
+              <NumInput label="Tentativi falliti" value={form.failedAttempts} onChange={(v) => up({ failedAttempts: v })} decimals={false} />
+            </div>
+            <Check checked={form.techIssue} onChange={(v) => up({ techIssue: v })}>Problema tecnico o di setup</Check>
+            <Field label="Note"><textarea value={form.notes} onChange={(e) => up({ notes: e.target.value })} /></Field>
+            <p className="small muted">Le parziali e le assistite sono categorie separate: non si sommano alle ripetizioni complete e non aggiornano i record a ROM completo.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+  );
+}
+
+function EditSetSheet({ set, ex, loadStep, onClose }: { set: SetEntry; ex: Exercise; loadStep: number; onClose: () => void }) {
+  const toast = useToast();
+  const [form, setForm] = useState<FormState>(fromSet(set));
+  const machine = useLiveQuery(async () => (ex.machineId ? db.machines.get(ex.machineId) : undefined), [ex.machineId]);
+  return (
+    <Sheet title="Modifica serie" onClose={onClose}>
+      <SetForm form={form} setForm={setForm} ex={ex} machine={machine} loadStep={loadStep} title={`Salvata alle ${new Date(set.savedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`} repStart={null} />
+      <div className="grid2">
+        <button className="btn danger" onClick={async () => { await deleteSet(set.id); toast({ text: 'Serie eliminata' }); onClose(); }}><Icon.trash /> Elimina</button>
+        <button className="btn primary" onClick={async () => {
+          try {
+            const full = form.fullReps ?? 0;
+            await updateSet(set.id, {
+              kind: form.kind, load: form.load, fullReps: full,
+              validReps: form.conform === 'all' ? full : form.conform === 'unknown' ? null : Math.min(form.validReps ?? 0, full),
+              fullRepsOtherSide: ex.unilateral ? form.otherSide : null, rir: form.rirUnknown ? null : form.rir, rirUnknown: form.rirUnknown,
+              plannedPartials: form.plannedPartials ?? 0, extraPartials: form.extraPartials ?? 0, assistedReps: form.assistedReps ?? 0, failedAttempts: form.failedAttempts ?? 0,
+              pain: form.pain, painNote: form.painNote, techIssue: form.techIssue, notes: form.notes
+            });
+            toast({ text: 'Modifica salvata ✓' });
+            onClose();
+          } catch (e) { toast({ text: `Modifica NON salvata: ${e instanceof Error ? e.message : e}`, kind: 'error' }); }
+        }}>Salva modifica</button>
+      </div>
+    </Sheet>
+  );
+}
+
+function AddExerciseSheet({ session, exercises, onClose }: { session: Session; exercises: Map<string, Exercise>; onClose: () => void }) {
+  const [q, setQ] = useState('');
+  const list = [...exercises.values()].filter((e) => (e.name + ' ' + e.aliases.join(' ')).toLowerCase().includes(q.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name));
+  return (
+    <Sheet title="Aggiungi esercizio" onClose={onClose}>
+      <input type="search" placeholder="Cerca…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cerca esercizio" />
+      <ul className="list mt">
+        {list.map((e) => (
+          <li key={e.id}><button className="listbtn" onClick={async () => {
+            const items = [...session.items, { itemId: uid(), exerciseId: e.id, sets: null, repMin: null, repMax: null, rirTargets: [], restSec: 180, skipped: false }];
+            await db.sessions.update(session.id, { items, currentIndex: items.length - 1 });
+            onClose();
+          }}><span>{e.name}{e.aliases.length ? <span className="muted small"> · {e.aliases.join(', ')}</span> : null}</span><Icon.plus /></button></li>
+        ))}
+      </ul>
+    </Sheet>
+  );
+}
+
+function FinishSheet({ session, sets, onClose }: { session: Session; sets: SetEntry[]; onClose: () => void }) {
+  const [notes, setNotes] = useState(session.notes);
+  const toast = useToast();
+  const working = sets.filter((s) => s.kind === 'working');
+  return (
+    <Sheet title="Termina seduta" onClose={onClose}>
+      <p>{working.length} serie allenanti, {sets.length - working.length} di riscaldamento.</p>
+      {working.length === 0 && <p className="small muted">Nessuna serie allenante: va bene anche così. Una seduta ridotta o saltata non è un fallimento.</p>}
+      <Field label="Note sulla seduta (facoltative)"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Sonno, energia, tempo disponibile…" /></Field>
+      <div className="col mt">
+        <button className="btn primary block" onClick={async () => { await finishSession(session.id, notes); setUnsaved('set-form', false); toast({ text: 'Seduta salvata ✓' }); onClose(); go(`allenamento/storico/${session.id}`); }}>Salva e termina</button>
+        <button className="btn block" onClick={onClose}>Continua la seduta</button>
+        {sets.length === 0 && (
+          <button className="btn danger block" onClick={async () => { await discardSession(session.id); setUnsaved('set-form', false); onClose(); go('allenamento'); }}>Elimina seduta vuota</button>
+        )}
+      </div>
+    </Sheet>
+  );
+}
+
+let audioCtx: AudioContext | null = null;
+function beep() {
+  try {
+    audioCtx ??= new AudioContext();
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.25);
+  } catch { /* audio non disponibile */ }
+}

@@ -1,0 +1,8 @@
+{
+  "appId": "it.diario.palestra",
+  "appName": "Diario Palestra",
+  "webDir": "dist",
+  "plugins": {
+    "LocalNotifications": { "iconColor": "#2f6fe0" }
+  }
+}
