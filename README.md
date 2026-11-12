@@ -6,7 +6,16 @@ React + TypeScript + Vite, PWA installabile, dati in IndexedDB (Dexie) **solo su
 > Non è un dispositivo medico e non sostituisce medico, dietista o personal trainer. I suggerimenti sono
 > regole deterministiche e spiegabili, con soglie prudenti e configurabili, **non** algoritmi validati clinicamente.
 
-## Avvio rapido (Windows)
+## Usala subito
+
+**https://lurbik.github.io/diario-palestra/** — apri in Chrome (Android) o Edge/Chrome (Windows) → "Installa app".
+Ogni push su `main` esegue i test e ripubblica (workflow `.github/workflows/pages.yml`); l'app installata mostra
+"Nuova versione disponibile" quando sei online, mai durante una seduta. I dati restano sul dispositivo.
+
+Dati personali di precompilazione: copia `src/data/personal.example.ts` in `src/data/personal.local.ts`
+(escluso da Git). La versione pubblicata non li contiene.
+
+## Avvio rapido in locale (Windows)
 
 Requisiti: Node.js ≥ 20.19 (testato con 22.17) e npm.
 

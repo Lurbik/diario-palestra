@@ -1,5 +1,16 @@
 # Installazione
 
+## Consigliato: dall'indirizzo pubblico
+
+1. Apri **https://lurbik.github.io/diario-palestra/** in **Chrome** sul telefono (in Edge o Chrome su Windows).
+2. Attendi "● Pronta offline" in fondo alla schermata Oggi.
+3. Menu ⋮ → **Installa app**. Su Windows: icona "Installa" nella barra degli indirizzi.
+4. Aggiornamenti: quando sei online e c'è una nuova versione compare "Aggiorna" (mai durante una seduta).
+
+Indirizzo diverso = archivio diverso: i dati registrati su `localhost:4173` si spostano con Backup → esporta/importa.
+
+Le sezioni seguenti restano valide per l'uso locale.
+
 ## Windows (Edge o Chrome)
 
 1. Nella cartella del progetto: `npm install` (solo la prima volta), poi `npm run build` e `npm run preview`.
