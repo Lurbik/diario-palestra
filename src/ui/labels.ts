@@ -1,4 +1,4 @@
-import type { LoadConvention, Muscle, SetEntry, Machine } from '../db/types';
+import type { LoadConvention, Muscle, SetEntry, Machine, EquipmentKind } from '../db/types';
 import { fmtNum } from '../lib/id';
 import { smithTotal } from '../lib/workout';
 
@@ -17,7 +17,7 @@ export const CONVENTION_LABEL: Record<LoadConvention, string> = {
 export const MUSCLE_LABEL: Record<Muscle, string> = {
   petto: 'Petto', dorsali: 'Dorsali', schiena_alta: 'Schiena alta', deltoidi_anteriori: 'Deltoidi anteriori', deltoidi_laterali: 'Deltoidi laterali',
   deltoidi_posteriori: 'Deltoidi posteriori', bicipiti: 'Bicipiti', tricipiti: 'Tricipiti', avambracci: 'Avambracci', quadricipiti: 'Quadricipiti',
-  femorali: 'Femorali', glutei: 'Glutei', adduttori: 'Adduttori', polpacci: 'Polpacci', addome: 'Addome', lombari: 'Lombari'
+  femorali: 'Femorali', glutei: 'Glutei', adduttori: 'Adduttori', polpacci: 'Polpacci', addome: 'Addome', lombari: 'Lombari', abduttori: 'Abduttori'
 };
 export const ALL_MUSCLES = Object.keys(MUSCLE_LABEL) as Muscle[];
 
@@ -44,3 +44,8 @@ export function totalLoadNote(convention: LoadConvention, load: number | null, m
   if (convention === 'cable_stack') return 'Carico selezionato: la resistenza effettiva dipende dal rapporto carrucole (non noto).';
   return null;
 }
+
+export const EQ_LABEL: Record<EquipmentKind, string> = {
+  macchina: 'Macchina', cavo: 'Cavo', manubri: 'Manubri', bilanciere: 'Bilanciere', multipower: 'Multipower', corpo_libero: 'Corpo libero'
+};
+

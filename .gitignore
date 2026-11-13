@@ -7,3 +7,4 @@ coverage
 tools/
 .claude/
 src/data/personal.local.ts
+private/

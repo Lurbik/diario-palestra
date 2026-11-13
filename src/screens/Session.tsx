@@ -9,6 +9,7 @@ import { formatDateIt, formatDuration } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { setUnsaved } from '../lib/pwa';
 import { proposedRir } from '../lib/progression';
+import { SessionTools } from './SessionTools';
 
 export interface FormState {
   id: string;
@@ -248,6 +249,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
               {item.skipped && <span className="badge warn"> saltato</span>}
             </p>
             {ex.toConfirm.length > 0 && <p className="small"><span className="badge warn">Da confermare</span> {ex.toConfirm[0]}{ex.toConfirm.length > 1 ? ` (+${ex.toConfirm.length - 1})` : ''}</p>}
+            <SessionTools session={session} ex={ex} idx={idx} exercises={exercises} />
 
             <div className="card flat">
               <div className="grid2">

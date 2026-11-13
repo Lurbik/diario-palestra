@@ -8,6 +8,7 @@ import { uid } from '../lib/id';
 import { proposedRir } from '../lib/progression';
 import { patchSettings } from '../db/bootstrap';
 import { setUnsaved } from '../lib/pwa';
+import { activateTemplate } from './Onboarding';
 
 const KIND_LABEL = { declared: 'Dichiarata', template: 'Template dimostrativo', custom: 'Personale' };
 
@@ -15,7 +16,7 @@ export function ProgramsScreen() {
   const programs = useLiveQuery(() => db.programs.toArray(), []) ?? [];
   const toast = useToast();
   const duplicate = async (p: Program) => {
-    const copy: Program = { ...structuredClone(p), id: uid(), name: `${p.name} (copia)`, kind: 'custom', isActive: false, createdAt: Date.now() };
+    const copy: Program = { ...structuredClone(p), id: uid(), name: `${p.name} (copia)`, kind: 'custom', origin: 'user', catalogVersion: undefined, isActive: false, createdAt: Date.now() };
     copy.days = copy.days.map((d) => ({ ...d, id: uid(), items: d.items.map((i) => ({ ...i, id: uid() })) }));
     await db.programs.add(copy);
     toast({ text: 'Scheda duplicata' });
@@ -27,7 +28,7 @@ export function ProgramsScreen() {
     });
   };
   const create = async () => {
-    const p: Program = { id: uid(), name: 'Nuova scheda', kind: 'custom', isActive: false, notes: '', createdAt: Date.now(), days: [{ id: uid(), name: 'Giorno 1', weekday: 1, items: [] }] };
+    const p: Program = { id: uid(), name: 'Nuova scheda', kind: 'custom', origin: 'user', isActive: false, notes: '', createdAt: Date.now(), days: [{ id: uid(), name: 'Giorno 1', weekday: 1, items: [] }] };
     await db.programs.add(p);
     go(`allenamento/scheda/${p.id}`);
   };
@@ -36,19 +37,36 @@ export function ProgramsScreen() {
       <a href="#/allenamento" className="small">‹ Allenamento</a>
       <h1>Schede</h1>
       <p className="small muted">La scheda attiva determina l'allenamento proposto per ogni giorno. Nessuna nuova scheda viene imposta: i template sono modelli dimostrativi modificabili, non piani validati.</p>
-      {programs.sort((a, b) => Number(b.isActive) - Number(a.isActive)).map((p) => (
+      {programs.filter((p) => !p.archived).sort((a, b) => Number(b.isActive) - Number(a.isActive) || Number(a.kind === 'template') - Number(b.kind === 'template')).map((p) => (
         <div className={`card ${p.isActive ? 'accent' : ''}`} key={p.id}>
           <div className="row between"><span className="badge">{KIND_LABEL[p.kind]}</span>{p.isActive && <span className="badge accent">Attiva</span>}</div>
           <h3 className="mt">{p.name}</h3>
           <p className="small muted">{p.days.map((d) => `${d.weekday ? WEEKDAYS[d.weekday].slice(0, 3) : '—'}: ${d.name}`).join(' · ')}</p>
+          {p.origin === 'legacy_seed' && p.kind !== 'template' && (
+            <div className="banner warn small">
+              <span className="grow">Scheda creata dal vecchio avvio precompilato di una versione precedente. Resta solo su questo dispositivo: decidi tu se tenerla.</span>
+            </div>
+          )}
+          {p.origin === 'legacy_seed' && p.kind !== 'template' && (
+            <div className="row wrap mb0" style={{ marginBottom: 8 }}>
+              <button className="btn sm primary" onClick={async () => { await db.programs.update(p.id, { origin: 'user', kind: 'custom' }); toast({ text: 'Ora è una tua scheda personale' }); }}>Mantieni come mia</button>
+              <button className="btn sm" onClick={async () => { await db.programs.update(p.id, { archived: true, isActive: false }); toast({ text: 'Archiviata (non cancellata): lo storico resta.' }); }}>Archivia</button>
+            </div>
+          )}
           <div className="row wrap">
             <a className="btn sm" href={`#/allenamento/scheda/${p.id}`}><Icon.edit /> Apri</a>
-            {!p.isActive && <button className="btn sm" onClick={() => activate(p.id)}>Rendi attiva</button>}
+            {!p.isActive && p.kind === 'template' && <button className="btn sm primary" onClick={async () => { await activateTemplate(p.id); toast({ text: 'Copia creata e attivata ✓' }); }}>Usa come mia scheda</button>}
+            {!p.isActive && p.kind !== 'template' && <button className="btn sm" onClick={() => activate(p.id)}>Rendi attiva</button>}
             <button className="btn sm" onClick={() => duplicate(p)}>Duplica</button>
           </div>
         </div>
       ))}
       <button className="btn block" onClick={create}><Icon.plus /> Nuova scheda vuota</button>
+      {programs.some((p) => p.archived) && (
+        <details className="card flat mt"><summary>Archiviate ({programs.filter((p) => p.archived).length})</summary>
+          <ul className="list">{programs.filter((p) => p.archived).map((p) => <li key={p.id} className="row between"><span className="small">{p.name}</span><button className="btn sm" onClick={() => db.programs.update(p.id, { archived: false })}>Ripristina</button></li>)}</ul>
+        </details>
+      )}
     </main>
   );
 }
@@ -80,7 +98,7 @@ export function ProgramEditor({ id }: { id: string }) {
     upDay(di, { items });
   };
   const save = async () => {
-    await db.programs.put(p);
+    await db.programs.put({ ...p, userModified: p.origin === 'catalog' ? true : p.userModified });
     setDirty(false);
     toast({ text: 'Scheda salvata ✓' });
   };

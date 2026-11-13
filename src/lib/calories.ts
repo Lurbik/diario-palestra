@@ -82,6 +82,7 @@ export function proposeCalories(args: {
   lastTargetChange: string | null;
   today: string;
   rules?: CalorieRules;
+  goal?: 'massa' | 'mantenimento' | 'dimagrimento';
 }): CalorieProposal {
   const rules = args.rules ?? DEFAULT_CAL_RULES;
   const q = dataQuality(args.weights, args.completeDiaryDays, args.today, rules);
@@ -110,18 +111,34 @@ export function proposeCalories(args: {
       deltaKcal: null, ratePctPerWeek: rate
     };
   }
-  const uncertain = (rate < rules.rateMinPct && rate + 2 * seRate >= rules.rateMinPct) || (rate > rules.rateMaxPct && rate - 2 * seRate <= rules.rateMaxPct);
+  const [minR, maxR] = goalRange(args.goal ?? 'massa', rules);
+  const uncertain = (rate < minR && rate + 2 * seRate >= minR) || (rate > maxR && rate - 2 * seRate <= maxR);
+  const range = `${String(minR).replace('.', ',')}…${String(maxR).replace('.', ',')}%/settimana`;
   if (uncertain) return { kind: 'hold_uncertain', title: 'Segnale incerto: mantieni', reasons: [rateTxt, 'La variazione è confrontabile con le oscillazioni: continua a raccogliere dati per 3–4 settimane.'], deltaKcal: null, ratePctPerWeek: rate };
-  if (rate < rules.rateMinPct) {
+  if (rate < minR) {
+    // Il peso scende (o sale) meno del ritmo scelto verso l'alto: proposta di piccolo aumento
     if (args.avgIntakeKcal != null && args.avgIntakeKcal < args.targetKcal * rules.adherenceMin) {
       return { kind: 'improve_practicality', title: 'Prima rendi il piano più praticabile', reasons: [rateTxt, `Consumo medio ${Math.round(args.avgIntakeKcal)} kcal sotto il target di ${args.targetKcal}: invece di alzarlo, prova pasti più pratici o porzioni distribuite meglio.`], deltaKcal: null, ratePctPerWeek: rate };
     }
-    return { kind: 'increase', title: `Proposta: +${rules.stepKcal} kcal/die`, reasons: [rateTxt, `Peso sotto il ritmo scelto (${rules.rateMinPct}–${rules.rateMaxPct}%/settimana) seguendo il target: piccolo aumento da rivalutare tra almeno 2 settimane.`], deltaKcal: rules.stepKcal, ratePctPerWeek: rate };
+    return { kind: 'increase', title: `Proposta: +${rules.stepKcal} kcal/die`, reasons: [rateTxt, `Andamento sotto il ritmo scelto (${range}) seguendo il target: piccolo aumento da rivalutare tra almeno 2 settimane.`], deltaKcal: rules.stepKcal, ratePctPerWeek: rate };
   }
-  if (rate > rules.rateMaxPct) {
-    return { kind: 'decrease', title: `Proposta: −${rules.stepKcal} kcal/die`, reasons: [rateTxt, 'Crescita più veloce del ritmo scelto in modo persistente: piccola riduzione e rivaluta il contesto. Nessuna compensazione drastica.'], deltaKcal: -rules.stepKcal, ratePctPerWeek: rate };
+  if (rate > maxR) {
+    if (args.avgIntakeKcal != null && args.avgIntakeKcal > args.targetKcal * (2 - rules.adherenceMin)) {
+      return { kind: 'improve_practicality', title: 'Prima avvicinati al target attuale', reasons: [rateTxt, `Consumo medio ${Math.round(args.avgIntakeKcal)} kcal sopra il target di ${args.targetKcal}: abbassarlo non servirebbe; valuta pasti più sazianti o porzioni più semplici da gestire.`], deltaKcal: null, ratePctPerWeek: rate };
+    }
+    return { kind: 'decrease', title: `Proposta: −${rules.stepKcal} kcal/die`, reasons: [rateTxt, `Andamento sopra il ritmo scelto (${range}) in modo persistente: piccola riduzione e rivaluta il contesto. Nessuna compensazione drastica.`], deltaKcal: -rules.stepKcal, ratePctPerWeek: rate };
   }
   return { kind: 'hold', title: 'Nel ritmo scelto: mantieni', reasons: [rateTxt], deltaKcal: null, ratePctPerWeek: rate };
+}
+
+/**
+ * Ritmi prudenti predefiniti per obiettivo (% del peso a settimana). Scelte operative modificabili,
+ * non soglie ottimali dimostrate. Massa usa i valori configurabili nelle impostazioni.
+ */
+export function goalRange(goal: 'massa' | 'mantenimento' | 'dimagrimento', rules: CalorieRules): [number, number] {
+  if (goal === 'mantenimento') return [-0.1, 0.1];
+  if (goal === 'dimagrimento') return [-0.75, -0.25];
+  return [rules.rateMinPct, rules.rateMaxPct];
 }
 
 /** Riferimento proteico informativo 1,6–2,2 g/kg (non prescrizione). */

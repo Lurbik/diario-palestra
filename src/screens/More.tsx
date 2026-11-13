@@ -3,12 +3,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import type { MealSlot, PlanEntry } from '../db/types';
 import { Check, Chip, Field, Icon, NumInput, Sheet, useSettings, useToast } from '../ui/kit';
-import { DAYTYPE_LABEL, MEAL_LABEL, type DayType, type Settings } from '../db/settings';
+import { DAYTYPE_LABEL, GOAL_LABEL, MEAL_LABEL, type DayType, type Settings } from '../db/settings';
 import { patchSettings } from '../db/bootstrap';
 import { addDays, dateKey, formatDateIt, weekStart, weekdayOf, WEEKDAYS, WEEKDAYS_SHORT } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
-import { generatePlan } from '../lib/recipes';
+import { planMeals } from '../lib/planner';
 import { buildIcs } from '../lib/ics';
+import { planSleep, tomorrowWake } from '../lib/sleep';
 import { syncNativeReminders } from '../lib/notify';
 import { downloadText } from '../lib/backup';
 import { SOURCES } from '../data/sources';
@@ -16,7 +17,7 @@ import { BackupScreen } from './Backup';
 import { OnboardingSheet } from './Onboarding';
 import { isNative, isStandalone } from '../lib/pwa';
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = __APP_VERSION__;
 
 export function MoreScreen({ route, offline }: { route: string[]; offline: { ready: boolean; detail: string } | null }) {
   const sub = route[1] ?? '';
@@ -66,21 +67,27 @@ function CalendarScreen() {
   const dtOf = (d: string): DayType => (dayTypes.find((x) => x.key === `dayType:${d}`)?.value as DayType) ?? (program?.days.some((x) => x.weekday === weekdayOf(d)) ? 'palestra_pomeriggio' : 'riposo');
 
   const generate = async () => {
-    const slots = days.flatMap((d) => settings.mealWindows[dtOf(d)].filter((w) => w.enabled).map((w) => ({ dateKey: d, slot: w.slot, workday: weekdayOf(d) <= 5 })));
-    const res = generatePlan({
-      slots, existing: plan, recipes, foods: new Map(foods.map((f) => [f.id, f])), rules: { excludedTags: settings.excludedTags, allergies: settings.profile.allergies },
-      coolerBag: settings.profile.coolerBag === 'si', maxActiveMinWeekday: 15, kcalTarget: target?.kcal ?? null, proteinTarget: settings.proteinTargetG, idGen: uid
+    const away = settings.profile.fridgeAway !== 'si';
+    const slots = days.filter((d) => d >= dateKey()).flatMap((d) => settings.mealWindows[dtOf(d)].filter((w) => w.enabled).map((w) => ({
+      dateKey: d, slot: w.slot, maxActiveMin: settings.profile.defaultCookMin ?? null,
+      mustBePortable: away && dtOf(d) === 'universita' && (w.slot === 'spuntino_mattina' || w.slot === 'pranzo'), coldChainOk: settings.profile.coolerBag === 'si'
+    })));
+    const [lots, batches, fb] = await Promise.all([db.stock.toArray(), db.batches.toArray(), db.kv.get('recipeFeedback')]);
+    const kept = plan.filter((p) => p.locked || p.done || p.status === 'confirmed');
+    const res = planMeals({
+      slots, recipes, foods: new Map(foods.map((f) => [f.id, f])), lots, batches, rules: { excludedTags: settings.excludedTags, allergies: settings.profile.allergies },
+      kcalTarget: target?.kcal ?? null, proteinTarget: settings.proteinTargetG, locked: kept, previous: plan, today: dateKey(), feedback: (fb?.value as never) ?? {}, budgetMs: 1500
     });
     await db.transaction('rw', db.plan, async () => {
-      await db.plan.bulkDelete(plan.filter((p) => !p.locked && !p.done).map((p) => p.id));
-      await db.plan.bulkPut(res.entries.filter((e) => !e.locked));
+      await db.plan.bulkDelete(plan.filter((p) => !p.locked && !p.done && p.status !== 'confirmed').map((p) => p.id));
+      await db.plan.bulkPut(res.entries.map((e) => ({ id: uid(), dateKey: e.dateKey, slot: e.slot, recipeId: e.recipeId, foodId: null, servings: e.servings, locked: false, done: false, status: 'proposed' as const })));
     });
-    setMessages(res.messages);
-    toast({ text: 'Piano rigenerato: i pasti bloccati sono stati mantenuti' });
+    setMessages([...res.messages, ...res.explain]);
+    toast({ text: 'Proposte aggiornate: i pasti bloccati o confermati non sono cambiati' });
   };
   const exportIcs = () => {
     const ev = [
-      ...(program?.days.filter((d) => d.weekday).map((d) => ({ uid: `allenamento-${d.id}`, title: `Allenamento: ${d.name}`, weekday: d.weekday!, start: '15:00', durationMin: settings.dailyTimeLimitMin ?? 90, description: 'Orario indicativo: modificalo nel calendario (15–16 o 20:30–21).' })) ?? []),
+      ...(program?.days.filter((d) => d.weekday).map((d) => ({ uid: `allenamento-${d.id}`, title: `Allenamento: ${d.name}`, weekday: d.weekday!, start: '15:00', durationMin: settings.dailyTimeLimitMin ?? 90, description: 'Orario indicativo: modificalo nel calendario.' })) ?? []),
       ...settings.prepWeekdays.map((w) => ({ uid: `prep-${w}`, title: 'Preparazione pasti', weekday: w, start: '17:00', durationMin: 60 })),
       ...settings.reminders.filter((r) => r.enabled).flatMap((r) => r.weekdays.map((w) => ({ uid: `${r.id}-${w}`, title: r.label, weekday: w, start: r.time, durationMin: 10 })))
     ];
@@ -161,6 +168,8 @@ function SleepScreen() {
   return (
     <>
       <h1>Sonno</h1>
+      <SleepPlanner />
+      <h2>Registro</h2>
       <div className="card">
         <Field label="Data del risveglio"><input type="date" value={d} onChange={(e) => setD(e.target.value)} /></Field>
         <div className="grid2 mt">
@@ -231,12 +240,14 @@ function SettingsScreen() {
       </section>
       <section className="card">
         <h3>Profilo e preferenze</h3>
-        <p className="small muted">{s.profile.name}, {s.profile.age} anni, {s.profile.heightCm} cm. Yogurt: {s.profile.yogurt ?? 'da chiedere'} · Pesto abituale tollerato: {s.profile.pestoOwnTolerated ?? 'da chiedere'} · Borsa termica: {s.profile.coolerBag ?? 'da chiedere'}</p>
-        <button className="btn sm" onClick={() => setOnb(true)}>Rivedi dati iniziali e domande</button>
+        <p className="small muted">{[s.profile.goal ? GOAL_LABEL[s.profile.goal] : 'Obiettivo non indicato', s.profile.experience, s.profile.trainingDaysPerWeek ? `${s.profile.trainingDaysPerWeek} giorni` : null, s.profile.sessionMinutes ? `${s.profile.sessionMinutes} min` : null, s.profile.equipment].filter(Boolean).join(' · ')}</p>
+        <div className="chips">{(['manuale', 'assistita', 'automatica'] as const).map((m) => <Chip key={m} on={s.assistMode === m} onClick={() => set({ assistMode: m })}>{{ manuale: 'Manuale', assistita: 'Assistita', automatica: 'Pianifica il non confermato' }[m]}</Chip>)}</div>
+        <p className="small muted">In tutte le modalità serie e pasti entrano nello storico solo quando li confermi.</p>
+        <button className="btn sm" onClick={() => setOnb(true)}>Rivedi obiettivo e preferenze</button>
         <Field label="Allergie (separate da virgola)" hint="Distinte dalle preferenze: filtrano ricette e sostituzioni"><input value={allergies} onChange={(e) => setAllergies(e.target.value)} onBlur={() => set({ profile: { ...s.profile, allergies: allergies.split(',').map((x) => x.trim()).filter(Boolean) } })} /></Field>
         <div className="mt"><strong className="small">Etichette escluse dai suggerimenti</strong>
-          <div className="chips">{['formaggio', 'latte', 'glutine', 'uova', 'pesce', 'affettato', 'arachidi', 'frutta_a_guscio', 'legumi'].map((t) => <Chip key={t} on={s.excludedTags.includes(t)} onClick={() => set({ excludedTags: s.excludedTags.includes(t) ? s.excludedTags.filter((x) => x !== t) : [...s.excludedTags, t] })}>{t}</Chip>)}</div>
-          {!s.excludedTags.includes('formaggio') && <p className="small">Attenzione: i formaggi esclusi possono ora comparire nei suggerimenti.</p>}
+          <div className="chips">{['formaggio', 'latte', 'glutine', 'uova', 'pesce', 'crostacei', 'affettato', 'arachidi', 'frutta_a_guscio', 'soia', 'legumi'].map((t) => <Chip key={t} on={s.excludedTags.includes(t)} onClick={() => set({ excludedTags: s.excludedTags.includes(t) ? s.excludedTags.filter((x) => x !== t) : [...s.excludedTags, t] })}>{t}</Chip>)}</div>
+          
         </div>
         <NumInput label="Target proteico (g/die)" value={s.proteinTargetG} onChange={(v) => set({ proteinTargetG: v })} decimals={false} />
       </section>
@@ -346,7 +357,7 @@ function InfoScreen() {
     <>
       <h1>Informazioni e limiti</h1>
       <div className="card small">
-        <p>Versione {APP_VERSION}. App personale di registrazione e organizzazione. Non è un dispositivo medico, non sostituisce medico, dietista o personal trainer e non promette risultati.</p>
+        <p>Versione {APP_VERSION} · build {__COMMIT__} · {new Date(__BUILD_DATE__).toLocaleString('it-IT')}. App personale di registrazione e organizzazione. Non è un dispositivo medico, non sostituisce medico, dietista o personal trainer e non promette risultati.</p>
         <p>Nessuna registrazione, nessun tracker, nessun invio automatico di dati. Unica richiesta di rete facoltativa: ricerca di un codice a barre su Open Food Facts, solo quando la avvii tu.</p>
       </div>
       <div className="card small">
@@ -364,3 +375,31 @@ function InfoScreen() {
 }
 
 export { WEEKDAYS };
+
+function SleepPlanner() {
+  const settings = useSettings();
+  const today = dateKey();
+  const ovRow = useLiveQuery(() => db.kv.get('wakeOverrides'), []);
+  const overrides = (ovRow?.value as Record<string, string | null> | undefined) ?? {};
+  const w = tomorrowWake(today, settings.sleepPlan.wakeTime, overrides);
+  const plan = w.time ? planSleep({ wakeDateKey: w.dateKey, wakeTime: w.time, sleepHours: settings.sleepTargetH, latencyMin: settings.sleepPlan.latencyMin, routineMin: settings.sleepPlan.routineMin }) : null;
+  const setPlan = (p: Partial<Settings['sleepPlan']>) => patchSettings({ sleepPlan: { ...settings.sleepPlan, ...p } });
+  return (
+    <section className="hero">
+      <div className="eyebrow">A che ora devi svegliarti domani?</div>
+      <div className="grid2 mt">
+        <Field label="Sveglia abituale"><input type="time" value={settings.sleepPlan.wakeTime ?? ''} onChange={(e) => setPlan({ wakeTime: e.target.value || null })} /></Field>
+        <Field label={`Solo domani (${formatDateIt(w.dateKey)})`}><input type="time" value={w.dateKey in overrides ? overrides[w.dateKey] ?? '' : ''} onChange={(e) => db.kv.put({ key: 'wakeOverrides', value: { ...overrides, [w.dateKey]: e.target.value || null }, updatedAt: Date.now() })} /></Field>
+      </div>
+      <div className="grid3 mt">
+        <NumInput label="Sonno desiderato (h)" value={settings.sleepTargetH} onChange={(v) => v && patchSettings({ sleepTargetH: v })} />
+        <NumInput label="Per addormentarti (min)" value={settings.sleepPlan.latencyMin} onChange={(v) => v != null && setPlan({ latencyMin: v })} decimals={false} />
+        <NumInput label="Routine serale (min)" value={settings.sleepPlan.routineMin} onChange={(v) => v != null && setPlan({ routineMin: v })} decimals={false} />
+      </div>
+      {plan ? (
+        <p className="mt" style={{ fontSize: '1.1rem' }}>Routine dalle <strong>{plan.label.routine}</strong> · a letto alle <strong>{plan.label.bed}</strong> · sonno dalle {plan.label.sleep} · sveglia {plan.label.wake}</p>
+      ) : <p className="muted mt">Inserisci una sveglia per calcolare gli orari.</p>}
+      <p className="small muted">Pianificazione organizzativa, non una previsione dell'addormentamento. Riferimento generale per adulti: almeno 7 ore (AASM/SRS); la durata la scegli tu. Nessun ciclo fisso da 90 minuti.</p>
+    </section>
+  );
+}

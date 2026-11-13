@@ -4,6 +4,9 @@ import { db } from '../db/db';
 import type { Exercise, LoadConvention, Machine, Muscle } from '../db/types';
 import { Check, Field, Icon, NumInput, Tabs, go, useToast } from '../ui/kit';
 import { ALL_MUSCLES, CONVENTION_LABEL, MUSCLE_LABEL } from '../ui/labels';
+import { EQ_LABEL } from '../ui/labels';
+
+const PATTERNS: [string, string][] = [['spinta_orizzontale', 'Spinta orizzontale'], ['spinta_verticale', 'Spinta verticale'], ['tirata_verticale', 'Tirata verticale'], ['tirata_orizzontale', 'Tirata orizzontale'], ['accosciata', 'Accosciata'], ['estensione_anca', 'Estensione d’anca'], ['estensione_ginocchio', 'Estensione ginocchio'], ['flessione_ginocchio', 'Flessione ginocchio'], ['polpacci', 'Polpacci'], ['adduzione', 'Adduzione'], ['abduzione', 'Abduzione'], ['bicipiti', 'Bicipiti'], ['tricipiti', 'Tricipiti'], ['alzate_laterali', 'Deltoidi laterali'], ['deltoidi_posteriori', 'Deltoidi posteriori'], ['addome', 'Addome'], ['stabilizzazione', 'Stabilizzazione']];
 import { uid, parseNum, fmtNum } from '../lib/id';
 import { dateKey, formatDateIt } from '../lib/dates';
 import { setUnsaved } from '../lib/pwa';
@@ -11,13 +14,15 @@ import { setUnsaved } from '../lib/pwa';
 export function CatalogScreen() {
   const [tab, setTab] = useState<'ex' | 'mac'>('ex');
   const [q, setQ] = useState('');
-  const exercises = useLiveQuery(() => db.exercises.orderBy('name').toArray(), []) ?? [];
+  const [pat, setPat] = useState<string>('');
+  const [eqk, setEqk] = useState<string>('');
+  const exercises = (useLiveQuery(() => db.exercises.orderBy('name').toArray(), []) ?? []).filter((e) => !e.archived && (!pat || e.pattern === pat) && (!eqk || e.equipmentKind === eqk)).sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite));
   const machines = useLiveQuery(() => db.machines.orderBy('name').toArray(), []) ?? [];
   const f = (s: string) => s.toLowerCase().includes(q.toLowerCase());
   const create = async () => {
     if (tab === 'ex') {
       const e: Exercise = { id: uid(), name: 'Nuovo esercizio', aliases: [], variant: '', machineId: null, equipment: '', primaryMuscles: [], secondaryMuscles: [], loadConvention: 'unknown', unilateral: false, romType: 'full', configVersion: 1, configNote: '', techNotes: '', toConfirm: [], policyClass: 'isolation' };
-      await db.exercises.add(e); go(`allenamento/esercizio/${e.id}`);
+      await db.exercises.add({ ...e, origin: 'user' }); go(`allenamento/esercizio/${e.id}/modifica`);
     } else {
       const m: Machine = { id: uid(), name: 'Nuova attrezzatura', category: '', brand: '', model: '', seat: '', backrest: '', rollers: '', grip: '', camLever: '', loadPoints: '', minLoadKg: null, increments: [], barWeightKg: null, pulleyRatio: null, maxedOut: false, photoId: null, notes: '', toConfirm: [] };
       await db.machines.add(m); go(`allenamento/macchina/${m.id}`);
@@ -28,10 +33,16 @@ export function CatalogScreen() {
       <a href="#/allenamento" className="small">‹ Allenamento</a>
       <h1>Esercizi e macchine</h1>
       <Tabs value={tab} onChange={setTab} items={[['ex', `Esercizi (${exercises.length})`], ['mac', `Macchine (${machines.length})`]]} />
-      <input type="search" placeholder="Cerca…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cerca" />
+      <input type="search" placeholder="Cerca per nome o sinonimo…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cerca" />
+      {tab === 'ex' && (
+        <div className="grid2 mt">
+          <select aria-label="Movimento" value={pat} onChange={(e) => setPat(e.target.value)}><option value="">Tutti i movimenti</option>{PATTERNS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+          <select aria-label="Attrezzatura" value={eqk} onChange={(e) => setEqk(e.target.value)}><option value="">Ogni attrezzatura</option>{Object.entries(EQ_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+        </div>
+      )}
       <ul className="list mt">
         {tab === 'ex' && exercises.filter((e) => f(e.name + e.aliases.join(' '))).map((e) => (
-          <li key={e.id}><a className="listbtn" href={`#/allenamento/esercizio/${e.id}`}><span>{e.name}{e.aliases.length ? <span className="small muted"> · “{e.aliases.join('”, “')}”</span> : null}{e.toConfirm.length ? <><br /><span className="badge warn">{e.toConfirm.length} da confermare</span></> : null}</span><Icon.right /></a></li>
+          <li key={e.id}><a className="listbtn" href={`#/allenamento/esercizio/${e.id}`}><span>{e.favorite ? '★ ' : ''}{e.name}<br /><span className="small muted">{e.primaryMuscles.map((m) => MUSCLE_LABEL[m]).join(', ')}{e.equipment ? ` · ${e.equipment}` : ''}{e.origin === 'legacy_seed' ? ' · versione precedente' : ''}</span></span><Icon.right /></a></li>
         ))}
         {tab === 'mac' && machines.filter((m) => f(m.name + m.category)).map((m) => (
           <li key={m.id}><a className="listbtn" href={`#/allenamento/macchina/${m.id}`}><span>{m.name}<br /><span className="small muted">{m.category}{m.maxedOut ? ' · carico già al massimo' : ''}</span></span><Icon.right /></a></li>
@@ -65,14 +76,14 @@ export function ExerciseEditor({ id }: { id: string }) {
       next.configVersion = stored.configVersion + 1;
       next.configNote = `Nuova configurazione dal ${formatDateIt(dateKey(), true)}${bump ? ' (setup/leva cambiati)' : ''}. Lo storico precedente resta separato.`;
     }
-    await db.exercises.put(next);
+    await db.exercises.put({ ...next, userModified: next.origin === 'catalog' ? true : next.userModified });
     setDirty(false);
     toast({ text: configChanged || bump ? 'Salvato ✓ — nuova baseline: i confronti ripartono da qui' : 'Salvato ✓' });
   };
   const toggleMuscle = (key: 'primaryMuscles' | 'secondaryMuscles', m: Muscle) => up({ [key]: e[key].includes(m) ? e[key].filter((x) => x !== m) : [...e[key], m] } as Partial<Exercise>);
   return (
     <main className="main">
-      <a href="#/allenamento/catalogo" className="small">‹ Catalogo</a>
+      <a href={`#/allenamento/esercizio/${e.id}`} className="small">‹ Scheda esercizio</a>
       <div className="col mt">
         <Field label="Nome"><input value={e.name} onChange={(x) => up({ name: x.target.value })} /></Field>
         <Field label="Alias" hint="Nomi informali, separati da virgola: restano alias, non descrizioni biomeccaniche."><input value={e.aliases.join(', ')} onChange={(x) => up({ aliases: x.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} /></Field>

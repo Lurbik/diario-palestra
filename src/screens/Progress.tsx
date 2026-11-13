@@ -13,15 +13,17 @@ import { MUSCLE_LABEL } from '../ui/labels';
 import { WeightSheet } from './WeightSheet';
 import { sumNutrients } from '../lib/nutrition';
 import { patchSettings } from '../db/bootstrap';
+import { BodyMapTab } from './BodyMap';
 
 export function ProgressScreen({ route }: { route: string[] }) {
-  const sub = (route[1] as 'peso' | 'allenamento' | 'recupero') || 'peso';
+  const sub = (route[1] as 'peso' | 'allenamento' | 'muscoli' | 'recupero') || 'peso';
   return (
     <main className="main">
       <h1>Progressi</h1>
-      <Tabs value={sub} onChange={(v) => go(`progressi/${v}`)} items={[['peso', 'Peso e calorie'], ['allenamento', 'Allenamento'], ['recupero', 'Sonno e sedute']]} />
+      <Tabs value={sub} onChange={(v) => go(`progressi/${v}`)} items={[['peso', 'Peso'], ['allenamento', 'Esercizi'], ['muscoli', 'Muscoli'], ['recupero', 'Sonno']]} />
       {sub === 'peso' && <WeightTab />}
       {sub === 'allenamento' && <TrainingTab />}
+      {sub === 'muscoli' && <BodyMapTab />}
       {sub === 'recupero' && <RecoveryTab />}
     </main>
   );
@@ -52,7 +54,7 @@ function WeightTab() {
     if (s.values.kcal != null) intakeByDay.set(d, s.values.kcal);
   }
   const avgIntake = intakeByDay.size ? [...intakeByDay.values()].reduce((a, b) => a + b, 0) / intakeByDay.size : null;
-  const proposal = proposeCalories({ weights, completeDiaryDays: completeDays, avgIntakeKcal: avgIntake, targetKcal: target?.kcal ?? null, lastTargetChange: target ? target.effectiveFrom : null, today, rules: settings.calorieRules });
+  const proposal = proposeCalories({ weights, completeDiaryDays: completeDays, avgIntakeKcal: avgIntake, targetKcal: target?.kcal ?? null, lastTargetChange: target ? target.effectiveFrom : null, today, rules: settings.calorieRules, goal: settings.profile.goal ?? undefined });
   const q = dataQuality(weights, completeDays, today, settings.calorieRules);
   const lastKg = daily.at(-1)?.kg ?? settings.profile.declaredWeightKg;
   const ref = lastKg ? proteinReference(lastKg) : null;

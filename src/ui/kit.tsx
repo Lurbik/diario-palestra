@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { defaultSettings, type Settings } from '../db/settings';
+import { mergeSettings, type Settings } from '../db/settings';
 import { parseNum, fmtNum } from '../lib/id';
 
 // ---------- Icone (SVG inline: disponibili offline) ----------
@@ -24,6 +24,14 @@ export const Icon = {
   plus: () => <svg viewBox="0 0 24 24" {...P} width="20" height="20" aria-hidden><path d="M12 5v14M5 12h14" /></svg>,
   edit: () => <svg viewBox="0 0 24 24" {...P} width="20" height="20" aria-hidden><path d="M4 20h4L19 9l-4-4L4 16v4z" /></svg>,
   trash: () => <svg viewBox="0 0 24 24" {...P} width="20" height="20" aria-hidden><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>,
+  moon: () => <svg viewBox="0 0 24 24" {...P} width="24" height="24" aria-hidden><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></svg>,
+  scale: () => <svg viewBox="0 0 24 24" {...P} width="24" height="24" aria-hidden><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M9 9a4 4 0 0 1 6 0M12 9l1.5-1.5" /></svg>,
+  star: () => <svg viewBox="0 0 24 24" {...P} width="20" height="20" aria-hidden><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z" /></svg>,
+  starFill: () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="currentColor"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z" /></svg>,
+  swap: () => <svg viewBox="0 0 24 24" {...P} width="20" height="20" aria-hidden><path d="M7 7h12l-3-3M17 17H5l3 3" /></svg>,
+  clock: () => <svg viewBox="0 0 24 24" {...P} width="20" height="20" aria-hidden><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></svg>,
+  body: () => <svg viewBox="0 0 24 24" {...P} width="24" height="24" aria-hidden><circle cx="12" cy="4" r="2" /><path d="M6 8h12M12 8v7M12 15l-3 6M12 15l3 6M8 8l-2 6M16 8l2 6" /></svg>,
+  info: () => <svg viewBox="0 0 24 24" {...P} width="20" height="20" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>,
   lock: () => <svg viewBox="0 0 24 24" {...P} width="18" height="18" aria-hidden><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
 };
 
@@ -43,7 +51,7 @@ export const go = (p: string) => { location.hash = '#/' + p; };
 // ---------- Impostazioni ----------
 export function useSettings(): Settings {
   const row = useLiveQuery(() => db.kv.get('settings'), []);
-  return { ...defaultSettings(), ...((row?.value as Partial<Settings>) ?? {}) };
+  return mergeSettings(row?.value as Partial<Settings> | undefined);
 }
 
 /** Orologio per la sola visualizzazione: i valori sono sempre calcolati dai timestamp. */

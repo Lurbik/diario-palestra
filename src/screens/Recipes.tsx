@@ -5,7 +5,10 @@ import type { MealSlot, Recipe } from '../db/types';
 import { Check, Chip, Field, Icon, NumInput, Sheet, go, useSettings, useToast } from '../ui/kit';
 import { MEAL_LABEL, MEAL_ORDER } from '../db/settings';
 import { recipeTotals, strictTotals, barTotals, NUTRIENT_KEYS, NUTRIENT_LABEL, NUTRIENT_UNIT } from '../lib/nutrition';
-import { suggestRecipes, exclusionReason, type RecipeFilter } from '../lib/recipes';
+import { suggestRecipes, exclusionReason, type RecipeFilter, type RecipeFeedback } from '../lib/recipes';
+import { CategoryIcon } from '../ui/visuals';
+import type { Food } from '../db/types';
+import { kvSet } from '../db/db';
 import { prepareBatch, eatRecipeDirect, ShortfallError } from '../lib/inventory';
 import { addDays, dateKey } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
@@ -22,9 +25,11 @@ export function RecipesTab() {
   const today = dateKey();
   const recent = useLiveQuery(() => db.diary.where('dateKey').between(addDays(today, -2), today, true, true).toArray(), [today]) ?? [];
   const [f, setF] = useState<RecipeFilter>(DEFAULT_FILTER);
+  const tracked = useLiveQuery(() => db.kv.get('pantryTracking'), [])?.value === true;
+  const fbRow = useLiveQuery(() => db.kv.get('recipeFeedback'), []);
   const [editor, setEditor] = useState<Recipe | null>(null);
   const fMap = new Map(foods.map((x) => [x.id, x]));
-  const list = suggestRecipes({ recipes, foods: fMap, lots, filter: f, rules: { excludedTags: settings.excludedTags, allergies: settings.profile.allergies }, recentDiary: recent, today });
+  const list = suggestRecipes({ recipes, foods: fMap, lots, filter: f, pantryTracked: tracked, feedback: (fbRow?.value as Record<string, RecipeFeedback>) ?? {}, rules: { excludedTags: settings.excludedTags, allergies: settings.profile.allergies }, recentDiary: recent, today });
   const shown = list.filter((s) => !s.excluded);
   const hidden = list.filter((s) => s.excluded);
   const up = (p: Partial<RecipeFilter>) => setF({ ...f, ...p });
@@ -57,7 +62,7 @@ export function RecipesTab() {
         const n = strictTotals(recipeTotals(r, fMap, 1 / r.servings).sum);
         return (
           <a className="card" key={r.id} href={`#/cibo/ricetta/${r.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
-            <div className="row between"><strong>{r.favorite ? '★ ' : ''}{r.name}</strong>{r.seed && <span className="badge">esempio</span>}</div>
+            <div className="row"><span className="thumb"><CategoryIcon cat={r.category} /></span><div className="grow"><strong>{r.favorite ? '★ ' : ''}{r.name}</strong>{r.origin === 'legacy_seed' && <span className="badge"> versione precedente</span>}<br /><span className="small muted">{r.difficulty ?? ''}{r.eating?.oneHand ? ' · si mangia con una mano' : ''}</span></div></div>
             <div className="small muted">{r.activeMin != null ? `${r.activeMin} min attivi` : 'tempo n.d.'}{r.totalMin != null ? ` · ${r.totalMin} totali` : ''} · {r.servings} porz.{r.portable ? ' · trasportabile' : ''}{r.needsColdChain ? ' · richiede freddo' : ''}</div>
             <NutrientLine n={n} /> <span className="small muted">a porzione</span>
             <div className="chips mt">
@@ -90,7 +95,9 @@ export function RecipeDetail({ id }: { id: string }) {
     <main className="main">
       <a href="#/cibo/ricette" className="small">‹ Ricette</a>
       <h1>{r.name}</h1>
-      {r.seed && <div className="banner info small">Ricetta dimostrativa: quantità adattabili, valori nutrizionali basati su stime non verificate finché non le sostituisci con le etichette.</div>}
+      <RecipeFeedbackRow id={r.id} />
+      <PortionVariants r={r} foods={fMap} />
+      {(r.seed || r.origin === 'legacy_seed') && <div className="banner info small">Ricetta dimostrativa: quantità adattabili, valori nutrizionali basati su stime non verificate finché non le sostituisci con le etichette.</div>}
       {excl && <div className="banner warn small">Esclusa dai suggerimenti: {excl}</div>}
       <div className="card">
         <div className="grid2">
@@ -238,14 +245,14 @@ export function RecipeEditorSheet({ recipe, onClose }: { recipe: Recipe; onClose
         <Field label="Conservazione"><textarea value={r.storage} onChange={(e) => up({ storage: e.target.value })} /></Field>
         <Field label="Fonte delle indicazioni di conservazione"><input value={r.storageSource} onChange={(e) => up({ storageSource: e.target.value })} /></Field>
         <Field label="Note"><textarea value={r.notes} onChange={(e) => up({ notes: e.target.value })} /></Field>
-        <button className="btn primary block" onClick={async () => { await db.recipes.put(r); toast({ text: 'Ricetta salvata ✓' }); onClose(); go(`cibo/ricetta/${r.id}`); }}>Salva</button>
+        <button className="btn primary block" onClick={async () => { await db.recipes.put({ ...r, origin: r.origin ?? 'user', userModified: r.origin === 'catalog' ? true : r.userModified }); toast({ text: 'Ricetta salvata ✓' }); onClose(); go(`cibo/ricetta/${r.id}`); }}>Salva</button>
       </div>
     </Sheet>
   );
 }
 
 const BAR_ID = 'r_barrette_utente';
-const BAR_FOODS: [string, string][] = [['f_avena', 'Avena'], ['f_miele', 'Miele'], ['f_burro_arachidi', 'Burro d\'arachidi'], ['f_fondente', 'Cioccolato fondente'], ['f_proteine_cioc', 'Proteine al cioccolato'], ['f_acqua', 'Acqua']];
+const BAR_SLUGS: [string, string][] = [['avena', 'Avena'], ['miele', 'Miele'], ['burro_arachidi', 'Burro d’arachidi'], ['cioccolato_fondente', 'Cioccolato fondente'], ['proteine_siero', 'Proteine in polvere'], ['acqua', 'Acqua']];
 
 export function BarsCalculator() {
   const toast = useToast();
@@ -261,6 +268,7 @@ export function BarsCalculator() {
     setPieces(existing.servings);
     setLoaded(true);
   }
+  const BAR_FOODS: [string, string][] = BAR_SLUGS.map(([slug, label]) => [foods.find((x) => x.slug === slug)?.id ?? `missing:${slug}`, label]);
   const ingredients = BAR_FOODS.filter(([id]) => (q[id] ?? 0) > 0).map(([id]) => ({ foodId: id, qty: q[id]!, unit: 'g' as const }));
   const tot = recipeTotals({ ingredients }, fMap);
   const b = barTotals(tot.sum.values, weight, pieces);
@@ -308,5 +316,29 @@ export function BarsCalculator() {
         }}>Ho preparato questo lotto</button>
       </div>
     </main>
+  );
+}
+
+const FB: [keyof RecipeFeedback, string][] = [['liked', 'Mi piace'], ['toTry', 'Da provare'], ['tooBig', 'Troppo abbondante'], ['tooDry', 'Troppo secca'], ['tooSlow', 'Troppo lenta'], ['never', 'Non propormela']];
+function RecipeFeedbackRow({ id }: { id: string }) {
+  const row = useLiveQuery(() => db.kv.get('recipeFeedback'), []);
+  const all = (row?.value as Record<string, RecipeFeedback> | undefined) ?? {};
+  const mine = all[id] ?? {};
+  return (
+    <div className="chips" aria-label="Il tuo feedback">
+      {FB.map(([k, l]) => <Chip key={k} on={!!mine[k]} onClick={() => kvSet('recipeFeedback', { ...all, [id]: { ...mine, [k]: !mine[k] } })}>{l}</Chip>)}
+    </div>
+  );
+}
+
+/** Varianti di porzione realmente ricalcolate (passi ammessi dalla ricetta), non etichette "da massa/dimagranti". */
+function PortionVariants({ r, foods }: { r: Recipe; foods: Map<string, Food> }) {
+  const steps = r.portionSteps?.length ? r.portionSteps : [1];
+  if (steps.length < 2) return null;
+  return (
+    <div className="card flat small">
+      <strong>Porzioni possibili</strong>
+      <ul className="list">{steps.map((k) => { const t = strictTotals(recipeTotals(r, foods, k / r.servings).sum); return <li key={k} className="row between"><span>{k === 1 ? 'Standard' : k < 1 ? 'Più leggera' : 'Più energetica'} ×{fmtNum(k, 2)}</span><span className="num">{t.kcal == null ? 'kcal mancanti' : `${fmtNum(t.kcal, 0)} kcal · ${fmtNum(t.protein, 0)} g prot.`}</span></li>; })}</ul>
+    </div>
   );
 }

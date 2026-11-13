@@ -1,7 +1,7 @@
 {
   "name": "app-palestra",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Diario personale offline per allenamento, alimentazione, dispensa, spesa e recupero (PWA).",
   "scripts": {
@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/make-icons.mjs",
     "cap:sync": "npm run build && npx cap sync android",
-    "build:public": "tsc --noEmit && vite build --mode public"
+    "check:public": "node scripts/check-public.mjs",
+    "catalog:foods": "node scripts/build-food-catalog.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.6.0",

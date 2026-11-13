@@ -9,6 +9,7 @@ import type { DiaryEntry, Food, MealSlot, Nutrients, PreparedBatch, StockLot, St
 import { uid } from './id';
 import { dateKey as todayKey } from './dates';
 import { batchPortion, nutrientsFor, recipeTotals, strictTotals, scaleNutrients } from './nutrition';
+import { lotStatus, fefo } from './lots';
 
 export class ShortfallError extends Error {
   constructor(public shortfalls: { foodId: string; name: string; missing: number; unit: string }[]) {
@@ -19,10 +20,13 @@ export class ShortfallError extends Error {
 const EPS = 1e-9;
 
 /** Pianifica il prelievo FIFO per scadenza dai lotti con la stessa unità. Non scrive nulla. */
-export function planDeduction(lots: StockLot[], foodId: string, qty: number, unit: string) {
+export function planDeduction(lots: StockLot[], foodId: string, qty: number, unit: string, today = todayKey()) {
+  // FEFO tra lotti ammissibili: mai lotti oltre "da consumarsi entro"; quelli "da valutare" solo dopo i validi
+  // (lo scarico avviene su conferma esplicita di un consumo/preparazione reale).
+  const rank = (l: StockLot) => (lotStatus(l, today) === 'usable' ? 0 : 1);
   const usable = lots
-    .filter((l) => l.foodId === foodId && l.unit === unit && l.qty > EPS)
-    .sort((a, b) => (a.expiry ?? '9999').localeCompare(b.expiry ?? '9999'));
+    .filter((l) => l.foodId === foodId && l.unit === unit && ['usable', 'review'].includes(lotStatus(l, today)))
+    .sort((a, b) => rank(a) - rank(b) || fefo(a, b));
   let need = qty;
   const takes: { lot: StockLot; take: number }[] = [];
   for (const l of usable) {
@@ -34,7 +38,7 @@ export function planDeduction(lots: StockLot[], foodId: string, qty: number, uni
   return { takes, missing: need > EPS ? need : 0 };
 }
 
-const TABLES = () => [db.stock, db.batches, db.stockTx, db.diary, db.foods, db.recipes];
+const TABLES = () => [db.stock, db.batches, db.stockTx, db.diary, db.foods, db.recipes, db.kv];
 
 export async function prepareBatch(opts: {
   recipeId: string; servingsMade: number; finalWeightG: number | null; location?: PreparedBatch['location'];
@@ -198,15 +202,16 @@ export async function logEstimate(opts: { label: string; nutrients: Nutrients; m
   return entry;
 }
 
-export async function purchase(opts: { foodId: string; qty: number; unit: 'g' | 'ml' | 'pz'; location: StockLot['location']; expiry: string | null; note?: string; at?: number }) {
+export async function purchase(opts: { foodId: string; qty: number; unit: 'g' | 'ml' | 'pz'; location: StockLot['location']; expiry: string | null; expiryType?: StockLot['expiryType']; note?: string; at?: number }) {
   if (!(opts.qty > 0)) throw new Error('Quantità non valida');
   return db.transaction('rw', TABLES(), async () => {
     const at = opts.at ?? Date.now();
-    const lot: StockLot = { id: uid(), foodId: opts.foodId, qty: opts.qty, unit: opts.unit, location: opts.location, purchasedAt: todayKey(at), expiry: opts.expiry, openedAt: null, note: opts.note ?? '' };
+    const lot: StockLot = { id: uid(), foodId: opts.foodId, qty: opts.qty, unit: opts.unit, location: opts.location, purchasedAt: todayKey(at), expiry: opts.expiry, expiryType: opts.expiryType ?? null, openedAt: null, note: opts.note ?? '' };
     await db.stock.add(lot);
     const f = await db.foods.get(opts.foodId);
     const tx: StockTx = { id: uid(), at, kind: 'purchase', label: `Comprato: ${f?.name ?? opts.foodId}`, moves: [{ table: 'stock', id: lot.id, field: 'qty', delta: opts.qty, created: true }], diaryIds: [], shortfalls: [], undone: false };
     await db.stockTx.add(tx);
+    await db.kv.put({ key: 'pantryTracking', value: true, updatedAt: at });
     return { lot, tx };
   });
 }

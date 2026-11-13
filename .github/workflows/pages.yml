@@ -1,4 +1,4 @@
-# Pubblica la versione "pubblica" (senza dati personali precompilati) su GitHub Pages
+# Pubblica la app (build neutra, senza dati personali) su GitHub Pages
 # a ogni push su main, solo se i test passano.
 name: Pubblica su GitHub Pages
 
@@ -27,7 +27,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run build:public
+      - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

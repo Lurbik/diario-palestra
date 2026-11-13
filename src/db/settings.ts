@@ -1,8 +1,11 @@
 import type { MealSlot } from './types';
 import { DEFAULT_POLICY, type PolicySettings } from '../lib/progression';
 import { DEFAULT_CAL_RULES, type CalorieRules } from '../lib/calories';
-import type { PersonalPain } from '../data/personal.example';
 
+// Valori predefiniti NEUTRI: nessun dato, orario o preferenza di una persona specifica.
+// I dati dell'utente vengono raccolti dall'onboarding o importati a runtime dal dispositivo.
+
+/** Chiavi storiche mantenute per compatibilità con i dati già salvati; le etichette sono generiche. */
 export type DayType = 'palestra_pomeriggio' | 'palestra_sera' | 'riposo' | 'universita';
 
 export interface MealWindow { slot: MealSlot; from: string; to: string; enabled: boolean }
@@ -10,32 +13,38 @@ export interface MealWindow { slot: MealSlot; from: string; to: string; enabled:
 export interface Reminder { id: string; label: string; time: string; weekdays: number[]; enabled: boolean }
 
 export type Answer = 'si' | 'no' | null;
+export type Goal = 'massa' | 'mantenimento' | 'dimagrimento';
+export type Experience = 'principiante' | 'intermedio' | 'esperto';
+export type EquipmentAccess = 'palestra' | 'casa_manubri' | 'corpo_libero';
 
 export interface Profile {
   name: string;
+  goal: Goal | null;
+  experience: Experience | null;
+  trainingDaysPerWeek: number | null;
+  sessionMinutes: number | null;
+  equipment: EquipmentAccess | null;
+  allergies: string[];             // distinte dalle preferenze
+  fridgeAway: Answer;              // frigo disponibile fuori casa (lavoro/studio)?
+  coolerBag: Answer;               // borsa termica con elementi refrigeranti?
+  defaultCookMin: number | null;   // tempo attivo abituale in cucina (min), salvato una volta
+  // Dati usati SOLO se si sceglie la stima da formula
   age: number | null;
   heightCm: number | null;
-  sex: 'M' | 'F' | null;          // chiesto solo se si sceglie una formula che lo richiede
-  declaredWeightKg: number | null;
-  declaredWeightDate: string | null;
-  declaredWeightNote: string;
-  trainingDaysPerWeek: number | null;
-  workHours: string;
-  study: string;
-  sleepAvgDeclared: string;
-  devices: string;
-  androidModel: string;            // da confermare solo per compatibilità
-  goal: string;
-  priorities: string;              // preferenze soggettive, non diagnosi
-  likes: string[];
-  dislikes: string[];
-  allergies: string[];             // distinte dalle preferenze
-  yogurt: Answer;                  // chiesto separatamente
-  pestoOwnTolerated: Answer;
-  coolerBag: Answer;               // possiede borsa termica con elementi refrigeranti?
-  stepsMeasured: number | null;
-  equipmentHome: string;
-  workConstraints: string;
+  sex: 'M' | 'F' | null;
+  // Campi storici (versioni precedenti), mantenuti se già presenti sul dispositivo
+  declaredWeightKg?: number | null;
+  declaredWeightDate?: string | null;
+  declaredWeightNote?: string;
+  likes?: string[];
+  dislikes?: string[];
+  [legacy: string]: unknown;
+}
+
+export interface SleepPlan {
+  wakeTime: string | null;      // sveglia ricorrente
+  latencyMin: number;           // tempo stimato per addormentarsi (dichiarato)
+  routineMin: number;           // tempo per prepararsi
 }
 
 export interface Settings {
@@ -55,19 +64,28 @@ export interface Settings {
   observationStart: string | null;
   policy: PolicySettings;
   calorieRules: CalorieRules;
-  indirectFraction: number | null; // conversione facoltativa delle serie indirette (approssimazione)
+  indirectFraction: number | null;
   showE1rm: boolean;
   sleepTargetH: number;
+  sleepPlan: SleepPlan;
   lastBackupAt: number | null;
   prepWeekdays: number[];
   mealWindows: Record<DayType, MealWindow[]>;
   reminders: Reminder[];
   onboardingDone: boolean;
   prefillConfirmed: boolean;
+  assistMode: 'manuale' | 'assistita' | 'automatica';
   profile: Profile;
 }
 
 const W = (slot: MealSlot, from: string, to: string, enabled = true): MealWindow => ({ slot, from, to, enabled });
+
+export function emptyProfile(): Profile {
+  return {
+    name: '', goal: null, experience: null, trainingDaysPerWeek: null, sessionMinutes: null, equipment: null, allergies: [],
+    fridgeAway: null, coolerBag: null, defaultCookMin: null, age: null, heightCm: null, sex: null
+  };
+}
 
 export function defaultSettings(): Settings {
   return {
@@ -75,64 +93,54 @@ export function defaultSettings(): Settings {
     highContrast: false,
     reduceMotion: false,
     loadStepKg: 2.5,
-    dailyTimeLimitMin: 90,
+    dailyTimeLimitMin: null,
     reducedTimePrioritiesConfirmed: false,
     sound: false,
     vibration: false,
     keepAwake: false,
     quietFrom: '23:00',
     quietTo: '07:00',
-    excludedTags: ['formaggio'],
+    excludedTags: [],
     proteinTargetG: null,
     observationStart: null,
     policy: DEFAULT_POLICY,
     calorieRules: DEFAULT_CAL_RULES,
     indirectFraction: null,
     showE1rm: false,
-    sleepTargetH: 7,
+    sleepTargetH: 8,
+    sleepPlan: { wakeTime: null, latencyMin: 15, routineMin: 30 },
     lastBackupAt: null,
-    prepWeekdays: [7, 3],
-    // Finestre organizzative, non orari biologicamente obbligatori.
+    prepWeekdays: [],
+    // Finestre organizzative generiche, modificabili: non orari biologicamente obbligatori.
     mealWindows: {
-      palestra_pomeriggio: [W('colazione', '07:00', '08:00'), W('spuntino_mattina', '10:00', '11:00'), W('pranzo', '14:15', '14:45'), W('merenda', '17:15', '18:00'), W('cena', '20:00', '21:00'), W('spuntino_sera', '22:00', '22:30', false)],
-      palestra_sera: [W('colazione', '07:00', '08:00'), W('spuntino_mattina', '10:00', '11:00'), W('pranzo', '14:15', '14:45'), W('merenda', '18:30', '19:15'), W('cena', '22:15', '23:00'), W('spuntino_sera', '23:00', '23:15', false)],
-      riposo: [W('colazione', '07:00', '08:00'), W('spuntino_mattina', '10:00', '11:00'), W('pranzo', '14:15', '14:45'), W('merenda', '17:00', '17:30'), W('cena', '20:00', '21:00'), W('spuntino_sera', '22:00', '22:30', false)],
-      universita: [W('colazione', '07:00', '08:00'), W('spuntino_mattina', '10:00', '11:00'), W('pranzo', '13:00', '14:00'), W('merenda', '16:30', '17:30'), W('cena', '20:00', '21:00'), W('spuntino_sera', '22:00', '22:30', false)]
+      palestra_pomeriggio: [W('colazione', '07:30', '08:30'), W('spuntino_mattina', '10:30', '11:00'), W('pranzo', '13:00', '14:00'), W('merenda', '16:30', '17:00'), W('cena', '20:00', '21:00'), W('spuntino_sera', '22:00', '22:30', false)],
+      palestra_sera: [W('colazione', '07:30', '08:30'), W('spuntino_mattina', '10:30', '11:00'), W('pranzo', '13:00', '14:00'), W('merenda', '17:30', '18:30'), W('cena', '21:00', '22:00'), W('spuntino_sera', '22:30', '23:00', false)],
+      riposo: [W('colazione', '07:30', '08:30'), W('spuntino_mattina', '10:30', '11:00'), W('pranzo', '13:00', '14:00'), W('merenda', '16:30', '17:00'), W('cena', '20:00', '21:00'), W('spuntino_sera', '22:00', '22:30', false)],
+      universita: [W('colazione', '07:00', '08:00'), W('spuntino_mattina', '10:30', '11:00'), W('pranzo', '13:00', '14:00'), W('merenda', '16:30', '17:30'), W('cena', '20:00', '21:00'), W('spuntino_sera', '22:00', '22:30', false)]
     },
     reminders: [
-      { id: 'rem_borsa', label: 'Prepara la borsa per domani (pasti e spuntini)', time: '21:30', weekdays: [7, 1, 2, 3, 4], enabled: false },
-      { id: 'rem_prep', label: 'Sessione di preparazione pasti', time: '17:00', weekdays: [7, 3], enabled: false }
+      { id: 'rem_domani', label: 'Prepara pasti e borsa per domani', time: '21:00', weekdays: [7, 1, 2, 3, 4], enabled: false },
+      { id: 'rem_prep', label: 'Sessione di preparazione pasti', time: '17:00', weekdays: [7], enabled: false }
     ],
     onboardingDone: false,
-    prefillConfirmed: !PREFILL_ENABLED,
-    profile: PREFILL_ENABLED ? prefillProfile() : emptyProfile()
+    prefillConfirmed: true,
+    assistMode: 'assistita',
+    profile: emptyProfile()
   };
 }
 
-/**
- * Build con VITE_PREFILL=off: nessun dato personale nel pacchetto JS
- * (utile se l'app viene ospitata su un indirizzo pubblico).
- */
-
-export function emptyProfile(): Profile {
+/** Unisce impostazioni salvate (anche di versioni precedenti) con i default, senza perdere valori dell'utente. */
+export function mergeSettings(saved: Partial<Settings> | undefined): Settings {
+  const d = defaultSettings();
+  const s = saved ?? {};
   return {
-    name: '', age: null, heightCm: null, sex: null, declaredWeightKg: null, declaredWeightDate: null, declaredWeightNote: '',
-    trainingDaysPerWeek: null, workHours: '', study: '', sleepAvgDeclared: '', devices: '', androidModel: '', goal: '', priorities: '',
-    likes: [], dislikes: [], allergies: [], yogurt: null, pestoOwnTolerated: null, coolerBag: null, stepsMeasured: null, equipmentHome: '', workConstraints: ''
+    ...d, ...s,
+    sleepPlan: { ...d.sleepPlan, ...(s.sleepPlan ?? {}) },
+    policy: { ...d.policy, ...(s.policy ?? {}) },
+    calorieRules: { ...d.calorieRules, ...(s.calorieRules ?? {}) },
+    mealWindows: { ...d.mealWindows, ...(s.mealWindows ?? {}) },
+    profile: { ...d.profile, ...(s.profile ?? {}) }
   };
-}
-
-/**
- * Dati di precompilazione: letti dal file locale src/data/personal.local.ts (escluso da Git).
- * Se il file manca (repository pubblico, CI) o con VITE_PREFILL=off, il profilo parte vuoto.
- */
-const personalModules = import.meta.glob<{ PERSONAL_PROFILE: Profile; PERSONAL_PAIN: PersonalPain | null }>('../data/personal.local.ts', { eager: true });
-const personal = Object.values(personalModules)[0] ?? null;
-export const PERSONAL_PAIN: PersonalPain | null = personal?.PERSONAL_PAIN ?? null;
-export const PREFILL_ENABLED = import.meta.env?.VITE_PREFILL !== 'off' && personal != null;
-
-export function prefillProfile(): Profile {
-  return personal ? structuredClone(personal.PERSONAL_PROFILE) : emptyProfile();
 }
 
 export const MEAL_LABEL: Record<MealSlot, string> = {
@@ -140,5 +148,6 @@ export const MEAL_LABEL: Record<MealSlot, string> = {
 };
 export const MEAL_ORDER: MealSlot[] = ['colazione', 'spuntino_mattina', 'pranzo', 'merenda', 'cena', 'spuntino_sera'];
 export const DAYTYPE_LABEL: Record<DayType, string> = {
-  palestra_pomeriggio: 'Palestra 15–16', palestra_sera: 'Palestra 20:30–21', riposo: 'Riposo / pausa', universita: 'Università'
+  palestra_pomeriggio: 'Allenamento di giorno', palestra_sera: 'Allenamento di sera', riposo: 'Riposo', universita: 'Giornata fuori casa'
 };
+export const GOAL_LABEL: Record<Goal, string> = { massa: 'Aumentare massa', mantenimento: 'Mantenere', dimagrimento: 'Ridurre il grasso' };

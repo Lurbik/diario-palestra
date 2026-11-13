@@ -7,7 +7,11 @@ export type DateKey = string; // 'YYYY-MM-DD' calcolata in Europe/Rome
 export type Muscle =
   | 'petto' | 'dorsali' | 'schiena_alta' | 'deltoidi_anteriori' | 'deltoidi_laterali' | 'deltoidi_posteriori'
   | 'bicipiti' | 'tricipiti' | 'avambracci' | 'quadricipiti' | 'femorali' | 'glutei' | 'adduttori'
-  | 'polpacci' | 'addome' | 'lombari';
+  | 'polpacci' | 'addome' | 'lombari' | 'abduttori';
+
+/** Provenienza di un record: catalogo pubblico, creato dall'utente, seed di versioni precedenti, importazione privata. */
+export type Origin = 'catalog' | 'user' | 'legacy_seed' | 'private_import';
+export interface CatalogMeta { origin?: Origin; catalogVersion?: number; userModified?: boolean; archived?: boolean }
 
 /** Convenzione del carico. Convenzioni diverse non si sommano né si confrontano. */
 export type LoadConvention =
@@ -21,7 +25,7 @@ export type LoadConvention =
   | 'assisted'           // assistenza (più carico = più facile)
   | 'unknown';
 
-export interface Machine {
+export interface Machine extends CatalogMeta {
   id: ID;
   name: string;
   category: string;
@@ -47,7 +51,10 @@ export interface Machine {
 
 export type RomType = 'full' | 'partial_planned';
 
-export interface Exercise {
+export type MovementPattern = 'spinta_orizzontale' | 'spinta_verticale' | 'tirata_verticale' | 'tirata_orizzontale' | 'accosciata' | 'estensione_anca' | 'flessione_ginocchio' | 'estensione_ginocchio' | 'polpacci' | 'adduzione' | 'abduzione' | 'bicipiti' | 'tricipiti' | 'alzate_laterali' | 'deltoidi_posteriori' | 'addome' | 'stabilizzazione' | 'altro';
+export type EquipmentKind = 'macchina' | 'cavo' | 'manubri' | 'bilanciere' | 'multipower' | 'corpo_libero';
+
+export interface Exercise extends CatalogMeta {
   id: ID;
   name: string;
   aliases: string[];
@@ -66,6 +73,16 @@ export interface Exercise {
   toConfirm: string[];
   /** Esercizi di base (RDL, hack...) per la policy RIR proposta. */
   policyClass: 'heavy_compound' | 'compound' | 'isolation' | 'calves_abs';
+  // Campi del catalogo (facoltativi per gli esercizi creati dall'utente o di versioni precedenti)
+  pattern?: MovementPattern;
+  equipmentKind?: EquipmentKind;
+  family?: string;
+  difficulty?: 1 | 2 | 3;
+  setup?: string;
+  steps?: string[];
+  commonErrors?: string[];
+  favorite?: boolean;
+  sources?: string[];
 }
 
 export interface RirTarget { min: number; max: number }
@@ -93,7 +110,7 @@ export interface ProgramDay {
   items: ProgramItem[];
 }
 
-export interface Program {
+export interface Program extends CatalogMeta {
   id: ID;
   name: string;
   kind: 'declared' | 'template' | 'custom';
@@ -195,7 +212,7 @@ export interface Nutrients {
 export type FoodState = 'raw' | 'cooked' | 'drained' | 'as_sold';
 export type FoodSource = 'label' | 'database' | 'estimate';
 
-export interface Food {
+export interface Food extends CatalogMeta {
   id: ID;
   name: string;
   brand: string;
@@ -217,11 +234,21 @@ export interface Food {
   shelfStable: 'yes' | 'no' | 'until_opened' | 'unknown';
   seed: boolean;
   favorite: boolean;
+  synonyms?: string[];
+  slug?: string;
+  originalName?: string;
+  sourceId?: string;
+  license?: string;
+  /** Informazione allergeni: dichiarata (tags affidabili) o sconosciuta. Sconosciuta ≠ assenza di allergeni. */
+  allergenInfo?: 'declared' | 'unknown';
+  category?: string;
 }
 
 export interface Ingredient { foodId: ID; qty: number; unit: 'g' | 'ml' | 'pz' }
 
-export interface Recipe {
+export type RecipeCategory = 'colazione' | 'pranzo' | 'cena' | 'spuntino' | 'multiporzione';
+
+export interface Recipe extends CatalogMeta {
   id: ID;
   name: string;
   ingredients: Ingredient[];
@@ -239,6 +266,13 @@ export interface Recipe {
   notes: string;
   seed: boolean;
   favorite: boolean;
+  category?: RecipeCategory;
+  difficulty?: 'assemblaggio' | 'facile' | 'intermedia';
+  /** Praticità nel consumo */
+  eating?: { oneHand: boolean; needsCutlery: boolean; needsReheat: boolean };
+  /** Moltiplicatori di porzione ammessi (porzioni realistiche), es. [0.75, 1, 1.25, 1.5] */
+  portionSteps?: number[];
+  tags?: string[];
 }
 
 export type MealSlot = 'colazione' | 'spuntino_mattina' | 'pranzo' | 'merenda' | 'cena' | 'spuntino_sera';
@@ -253,6 +287,8 @@ export interface StockLot {
   expiry: DateKey | null;
   openedAt: DateKey | null;
   note: string;
+  /** use_by = da consumarsi entro (sicurezza); best_before = preferibilmente entro (qualità). */
+  expiryType?: 'use_by' | 'best_before' | null;
 }
 
 export interface PreparedBatch {
@@ -301,6 +337,8 @@ export interface DiaryEntry {
 }
 
 export interface PlanEntry {
+  /** proposto dal motore / confermato dall'utente (preparato e consumato sono tracciati da lotti e diario) */
+  status?: 'proposed' | 'confirmed';
   id: ID;
   dateKey: DateKey;
   slot: MealSlot;

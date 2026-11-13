@@ -7,6 +7,7 @@ import { SessionScreen, SetForm, fromSet, type FormState } from './Session';
 import { updateSet, deleteSet } from '../lib/workout';
 import { ProgramsScreen, ProgramEditor } from './Programs';
 import { CatalogScreen, ExerciseEditor, MachineEditor } from './Catalog';
+import { ExercisePage } from './ExercisePage';
 import { estimateItemMin, sessionTimes, startSession, discardSession } from '../lib/workout';
 import { dateKey, formatDateIt, formatDuration, weekdayOf, WEEKDAYS } from '../lib/dates';
 import { describeSet } from '../ui/labels';
@@ -19,7 +20,8 @@ export function WorkoutScreen({ route }: { route: string[] }) {
   if (sub === 'schede') return <ProgramsScreen />;
   if (sub === 'scheda' && route[2]) return <ProgramEditor id={route[2]} />;
   if (sub === 'catalogo') return <CatalogScreen />;
-  if (sub === 'esercizio' && route[2]) return <ExerciseEditor id={route[2]} />;
+  if (sub === 'esercizio' && route[2] && route[3] === 'modifica') return <ExerciseEditor id={route[2]} />;
+  if (sub === 'esercizio' && route[2]) return <ExercisePage id={route[2]} />;
   if (sub === 'macchina' && route[2]) return <MachineEditor id={route[2]} />;
   if (sub === 'storico' && route[2]) return <SessionDetail id={route[2]} />;
   if (sub === 'storico') return <HistoryScreen />;

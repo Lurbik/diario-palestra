@@ -6,8 +6,11 @@ import { proposeCalories, dataQuality } from '../src/lib/calories';
 import { dateKey, addDays, weekdayOf, romeLocalToEpoch, daysBetween } from '../src/lib/dates';
 import { painSafety } from '../src/lib/safety';
 import { configKey, sessionTimes, restState, dumbbellTotal, smithTotal, tonnage } from '../src/lib/workout';
-import { SEED_RECIPES, SEED_FOODS } from '../src/data/seedFood';
-import { declaredProgram, SEED_EXERCISES } from '../src/data/seedGym';
+import { EXERCISE_CATALOG } from '../src/catalog/exercises';
+import { buildRecipeCatalog, RECIPE_COUNT } from '../src/catalog/recipes';
+import { templatesV2 } from '../src/catalog/templates';
+import { toFood, type CatalogFoodItem } from '../src/catalog/load';
+import foodsJson from '../src/catalog/foods.json';
 import type { Food, SetEntry, WeightEntry } from '../src/db/types';
 import { parseNum } from '../src/lib/id';
 
@@ -62,34 +65,41 @@ describe('nutrienti', () => {
   it('virgola italiana', () => { expect(parseNum('12,5')).toBe(12.5); expect(parseNum('')).toBeNull(); });
 });
 
-describe('seed', () => {
-  it('nessuna ricetta include alimenti con formaggi esclusi', () => {
-    const tagged = new Set(SEED_FOODS.filter((f) => f.tags.includes('formaggio')).map((f) => f.id));
-    for (const r of SEED_RECIPES) for (const i of r.ingredients) expect(tagged.has(i.foodId)).toBe(false);
+const FOOD_ITEMS = (foodsJson as unknown as { items: CatalogFoodItem[] }).items;
+const CAT_FOODS = FOOD_ITEMS.map((i) => toFood(i, 2));
+const CAT_RECIPES = buildRecipeCatalog(new Map(FOOD_ITEMS.map((i) => [i.slug, i.id])));
+
+describe('cataloghi pubblici', () => {
+  it('conteggi minimi della prima tranche: ≥100 alimenti, ≥30 ricette, ≥60 esercizi, ID unici', () => {
+    expect(CAT_FOODS.length).toBeGreaterThanOrEqual(100);
+    expect(RECIPE_COUNT).toBeGreaterThanOrEqual(30);
+    expect(EXERCISE_CATALOG.length).toBeGreaterThanOrEqual(60);
+    for (const list of [CAT_FOODS, CAT_RECIPES.recipes, EXERCISE_CATALOG]) expect(new Set(list.map((x) => x.id)).size).toBe(list.length);
+    expect(new Set(EXERCISE_CATALOG.map((e) => e.name)).size).toBe(EXERCISE_CATALOG.length);
   });
-  it('lo yogurt non è inserito di default', () => {
-    expect(SEED_FOODS.some((f) => /yogurt/i.test(f.name))).toBe(false);
+  it('ogni alimento ha fonte, ID originale e licenza; ogni ricetta ingredienti risolti', () => {
+    for (const f of CAT_FOODS) { expect(f.sourceId).toBeTruthy(); expect(f.license).toMatch(/CC0/); expect(f.originalName).toBeTruthy(); }
+    expect(CAT_RECIPES.unresolved).toEqual([]);
   });
-  it('Bayesian mantiene serie sconosciute; la scheda è un modello senza sedute', () => {
-    const p = declaredProgram();
-    const bay = p.days.flatMap((d) => d.items).find((i) => i.exerciseId === 'ex_bayesian')!;
-    expect(bay.sets).toBeNull();
-    expect(p.kind).toBe('declared');
-    expect(p.days.map((d) => d.weekday)).toEqual([1, 2, 3, 5, 6]);
+  it('ogni esercizio del catalogo ha 3–5 istruzioni, errori comuni e muscoli', () => {
+    for (const e of EXERCISE_CATALOG) {
+      expect(e.steps!.length).toBeGreaterThanOrEqual(3);
+      expect(e.steps!.length).toBeLessThanOrEqual(5);
+      expect(e.commonErrors!.length).toBeGreaterThanOrEqual(1);
+      expect(e.primaryMuscles.length).toBeGreaterThan(0);
+    }
   });
-  it('conteggio serie dirette della scheda dichiarata', () => {
-    const p = declaredProgram();
-    const ex = new Map(SEED_EXERCISES.map((e) => [e.id, e]));
-    const count = (m: string) => p.days.flatMap((d) => d.items).filter((i) => ex.get(i.exerciseId)!.primaryMuscles.includes(m as never)).reduce((a, i) => a + (i.sets ?? 0), 0);
-    expect(count('petto')).toBe(6);
-    expect(count('quadricipiti')).toBe(6);
-    expect(count('femorali')).toBe(6);
-    expect(count('tricipiti')).toBe(6);
-    expect(count('bicipiti')).toBe(4); // + Bayesian da confermare
-    expect(count('deltoidi_laterali')).toBe(4);
-    expect(count('deltoidi_anteriori')).toBe(2);
-    expect(count('polpacci')).toBe(4);
-    expect(count('addome')).toBe(4);
+  it('i template usano solo esercizi del catalogo e non sono attivi', () => {
+    const ids = new Set(EXERCISE_CATALOG.map((e) => e.id));
+    for (const t of templatesV2()) { expect(t.isActive).toBe(false); for (const d of t.days) for (const i of d.items) expect(ids.has(i.exerciseId)).toBe(true); }
+  });
+  it('le ricette del catalogo non contengono formaggi etichettati', () => {
+    const cheese = new Set(CAT_FOODS.filter((f) => f.tags.includes('formaggio')).map((f) => f.id));
+    for (const r of CAT_RECIPES.recipes) for (const i of r.ingredients) expect(cheese.has(i.foodId)).toBe(false);
+  });
+  it('densità solo per liquidi documentati, non 1 per tutti', () => {
+    expect(CAT_FOODS.find((f) => f.name.startsWith('Pasta di semola (secca'))!.densityGPerMl).toBeNull();
+    expect(CAT_FOODS.find((f) => f.name === 'Latte intero')!.densityGPerMl).toBeCloseTo(1.03);
   });
 });
 

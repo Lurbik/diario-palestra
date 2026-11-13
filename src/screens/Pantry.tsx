@@ -9,6 +9,7 @@ import { shoppingNeeds } from '../lib/recipes';
 import { addDays, dateKey, daysBetween, formatDateIt } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { batchPortion } from '../lib/nutrition';
+import { lotStatus } from '../lib/lots';
 import { NutrientLine } from './Food';
 
 const LOC = { dispensa: 'Dispensa', frigo: 'Frigo', freezer: 'Freezer' } as const;
@@ -25,13 +26,17 @@ export function PantryTab() {
   );
 }
 
-function expiryBadge(exp: string | null) {
-  if (!exp) return null;
-  const d = daysBetween(dateKey(), exp);
-  if (d < 0) return <span className="badge danger">oltre la data in etichetta</span>;
-  if (d <= 2) return <span className="badge warn">scade {d === 0 ? 'oggi' : `tra ${d} g`}</span>;
-  return <span className="badge">scad. {formatDateIt(exp)}</span>;
+function expiryBadge(l: StockLot) {
+  const st = lotStatus(l, dateKey());
+  if (st === 'unsafe') return <span className="badge danger">oltre "da consumarsi entro": non usare</span>;
+  if (st === 'review') return <span className="badge warn">oltre {l.expiryType === 'best_before' ? '"preferibilmente entro"' : 'la data'}: da valutare, non proposto</span>;
+  if (!l.expiry) return null;
+  const d = daysBetween(dateKey(), l.expiry);
+  if (d <= 2) return <span className="badge warn">{l.expiryType === 'best_before' ? 'pref. entro' : 'scade'} {d === 0 ? 'oggi' : `tra ${d} g`}</span>;
+  return <span className="badge">{l.expiryType === 'best_before' ? 'pref. entro' : 'scad.'} {formatDateIt(l.expiry)}</span>;
 }
+
+const EXPIRY_TYPE: Record<string, string> = { use_by: 'Da consumarsi entro (sicurezza)', best_before: 'Preferibilmente entro (qualità)', '': 'Non indicato' };
 
 function Stock() {
   const toast = useToast();
@@ -54,7 +59,7 @@ function Stock() {
             <h3>{LOC[loc]}</h3>
             {ls.map((l) => (
               <div className="setline" key={l.id}>
-                <div><div>{fMap.get(l.foodId)?.name ?? l.foodId}</div><div className="small muted num">{fmtNum(l.qty, 1)} {l.unit}{l.openedAt ? ` · aperto ${formatDateIt(l.openedAt)}` : ''} {expiryBadge(l.expiry)}</div></div>
+                <div><div>{fMap.get(l.foodId)?.name ?? l.foodId}</div><div className="small muted num">{fmtNum(l.qty, 1)} {l.unit}{l.openedAt ? ` · aperto ${formatDateIt(l.openedAt)}` : ''} {expiryBadge(l)}</div></div>
                 <button className="iconbtn" aria-label="Modifica scorta" onClick={() => setEdit(l)}><Icon.edit /></button>
               </div>
             ))}
@@ -79,16 +84,18 @@ function EditLot({ lot, onDone }: { lot: StockLot; onDone: () => void }) {
   const [exp, setExp] = useState(lot.expiry ?? '');
   const [opened, setOpened] = useState(lot.openedAt ?? '');
   const [loc, setLoc] = useState(lot.location);
+  const [etype, setEtype] = useState<string>(lot.expiryType ?? '');
   return (
     <div className="col">
       <NumInput label={`Quantità (${lot.unit})`} value={qty} onChange={setQty} />
       <Field label="Scadenza in etichetta"><input type="date" value={exp} onChange={(e) => setExp(e.target.value)} /></Field>
+      <Field label="Tipo di scadenza"><select value={etype} onChange={(e) => setEtype(e.target.value)}>{Object.entries(EXPIRY_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       <Field label="Aperto il"><input type="date" value={opened} onChange={(e) => setOpened(e.target.value)} /></Field>
       <Field label="Luogo"><select value={loc} onChange={(e) => setLoc(e.target.value as StockLot['location'])}>{Object.entries(LOC).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       <button className="btn primary block" disabled={qty == null || qty < 0} onClick={async () => {
         await db.transaction('rw', db.stock, db.stockTx, async () => {
           const delta = (qty ?? 0) - lot.qty;
-          await db.stock.update(lot.id, { qty: qty ?? 0, expiry: exp || null, openedAt: opened || null, location: loc });
+          await db.stock.update(lot.id, { qty: qty ?? 0, expiry: exp || null, expiryType: (etype || null) as StockLot['expiryType'], openedAt: opened || null, location: loc });
           if (Math.abs(delta) > 1e-9) await db.stockTx.add({ id: uid(), at: Date.now(), kind: 'adjust', label: 'Rettifica manuale scorta', moves: [{ table: 'stock', id: lot.id, field: 'qty', delta }], diaryIds: [], shortfalls: [], undone: false });
         });
         onDone();
@@ -115,6 +122,7 @@ export function PurchaseSheet({ food, onClose, defaultQty, defaultUnit, onDone }
   const [unit, setUnit] = useState<'g' | 'ml' | 'pz'>(defaultUnit ?? food.defaultUnit);
   const [loc, setLoc] = useState<StockLot['location']>(food.shelfStable === 'no' ? 'frigo' : 'dispensa');
   const [exp, setExp] = useState('');
+  const [etype, setEtype] = useState<string>('');
   return (
     <Sheet title={`Comprato: ${food.name}`} onClose={onClose}>
       <div className="col">
@@ -124,7 +132,8 @@ export function PurchaseSheet({ food, onClose, defaultQty, defaultUnit, onDone }
         </div>
         <Field label="Luogo"><select value={loc} onChange={(e) => setLoc(e.target.value as StockLot['location'])}>{Object.entries(LOC).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
         <Field label="Scadenza in etichetta (facoltativa)"><input type="date" value={exp} onChange={(e) => setExp(e.target.value)} /></Field>
-        <button className="btn primary block" disabled={!qty} onClick={async () => { await purchase({ foodId: food.id, qty: qty!, unit, location: loc, expiry: exp || null }); toast({ text: 'Aggiunto in dispensa ✓' }); onDone?.(); onClose(); }}>Aggiungi alla dispensa</button>
+        {exp && <Field label="Tipo di scadenza"><select value={etype} onChange={(e) => setEtype(e.target.value)}>{Object.entries(EXPIRY_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>}
+        <button className="btn primary block" disabled={!qty} onClick={async () => { await purchase({ foodId: food.id, qty: qty!, unit, location: loc, expiry: exp || null, expiryType: (etype || null) as StockLot['expiryType'] }); toast({ text: 'Aggiunto in dispensa ✓' }); onDone?.(); onClose(); }}>Aggiungi alla dispensa</button>
       </div>
     </Sheet>
   );
@@ -202,7 +211,8 @@ export function ShoppingTab() {
   const batches = useLiveQuery(() => db.batches.toArray(), []) ?? [];
   const manual = useLiveQuery(() => db.shopping.orderBy('id').toArray(), []) ?? [];
   const fMap = new Map(foods.map((f) => [f.id, f]));
-  const needs = shoppingNeeds({ plan, recipes: new Map(recipes.map((r) => [r.id, r])), foods: fMap, lots, batches });
+  const tracked = useLiveQuery(() => db.kv.get('pantryTracking'), [])?.value === true;
+  const needs = shoppingNeeds({ plan, recipes: new Map(recipes.map((r) => [r.id, r])), foods: fMap, lots, batches, today, pantryTracked: tracked });
   const [buy, setBuy] = useState<{ food: Food; qty?: number; unit?: 'g' | 'ml' | 'pz'; manualId?: string } | null>(null);
   const [name, setName] = useState('');
   const [pick, setPick] = useState(false);
@@ -225,6 +235,7 @@ export function ShoppingTab() {
           );
         })}
         {plan.length > 0 && !needs.some((n) => n.toBuy > 0) && <p className="small">Hai già tutto per il piano ✓</p>}
+        {!tracked && plan.length > 0 && <p className="small">Dispensa non ancora compilata: le quantità "da comprare" non tengono conto di ciò che hai già in casa.</p>}
         <p className="small muted">Le porzioni già preparate in frigo/freezer coprono i pasti pianificati della stessa ricetta. "Pianificato" non consuma la dispensa; "Comprato" la aggiorna.</p>
       </div>
       <div className="card">
