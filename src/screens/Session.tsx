@@ -6,10 +6,10 @@ import { Chip, Icon, Sheet, Stepper, go, useNow, useSettings, useToast, NumInput
 import { CONVENTION_LABEL, describeSet, totalLoadNote } from '../ui/labels';
 import { configKey, deleteSet, discardSession, finishSession, previousPerformance, restState, saveSet, sessionTimes, togglePause, updateSet, estimateItemMin, type SetDraft } from '../lib/workout';
 import { formatDateIt, formatDuration } from '../lib/dates';
-import { fmtNum, uid } from '../lib/id';
+import { uid } from '../lib/id';
 import { setUnsaved } from '../lib/pwa';
-import { proposedRir } from '../lib/progression';
 import { SessionTools } from './SessionTools';
+import { CompareEntry, type CompareField } from './SessionCompare';
 import { prefillLoad } from '../lib/loadDecision';
 
 export interface FormState {
@@ -110,6 +110,9 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
   const draftLoaded = fs.key === draftKey && fs.loaded;
   const setForm = (f: FormState | null) => setFs({ key: draftKey, form: f, loaded: true });
   const [saving, setSaving] = useState(false);
+  // Campo attivo del pannello di confronto: si riparte da "Complete" a ogni serie e a ogni esercizio
+  const [field, setField] = useState<CompareField>('reps');
+  useEffect(() => { setField('reps'); }, [draftKey]);
   const lastSavedFor = useRef<string>('');
 
   useEffect(() => {
@@ -170,10 +173,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
     await db.sessions.update(session.id, { currentIndex: i });
   };
 
-  const target = item ? `${item.sets ?? '?'} × ${item.repMin ?? '?'}${item.repMax != null && item.repMax !== item.repMin ? '–' + item.repMax : ''}` : '';
   const setNo = working.length + 1;
-  const rirT = item?.rirTargets[working.length] ?? null;
-  const proposal = ex && item?.sets ? proposedRir(ex.policyClass, item.sets)[working.length] : null;
   const loadStep = machine?.increments?.length ? Math.min(...machine.increments) : settings.loadStepKg;
 
   const doSave = async () => {
@@ -188,6 +188,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
       lastSavedFor.current = set.id;
       const next = emptyForm(form.load, null, form.kind);
       setForm(next);
+      setField('reps');
       await kvSet(draftKey, next);
       setUnsaved('set-form', false);
       if (!duplicate) {
@@ -259,43 +260,9 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
             {ex.toConfirm.length > 0 && <p className="small"><span className="badge warn">Da confermare</span> {ex.toConfirm[0]}{ex.toConfirm.length > 1 ? ` (+${ex.toConfirm.length - 1})` : ''}</p>}
             <SessionTools session={session} ex={ex} idx={idx} exercises={exercises} />
 
-            <div className="card flat">
-              <div className="grid2">
-                <div>
-                  <div className="eyebrow">Riferimento</div>
-                  <div className="num"><strong>{target}</strong></div>
-                  <div className="small muted">
-                    {rirT ? `RIR target ${rirT.min === rirT.max ? rirT.min : `${rirT.min}–${rirT.max}`}` : proposal ? `RIR non impostato (policy proposta ${proposal.min === proposal.max ? proposal.min : `${proposal.min}–${proposal.max}`}, da confermare)` : 'RIR non impostato'}
-                  </div>
-                </div>
-                <div>
-                  <div className="eyebrow">Precedente</div>
-                  {prev ? (
-                    <>
-                      <div className="small"><strong>{formatDateIt(prev.dateKey)}</strong></div>
-                      <div className="small">{prev.sets.filter((s) => s.kind === 'working').map((s) => `${fmtNum(s.load, 2)}×${s.fullReps}${s.validReps != null && s.validReps !== s.fullReps ? ` (${s.validReps} conf.)` : ''}${s.rir != null ? ` R${s.rir}` : ''}${s.extraPartials ? ` +${s.extraPartials}p` : ''}`).join(', ') || '—'}</div>
-                    </>
-                  ) : <div className="small muted">Nessuna seduta con questa configurazione</div>}
-                </div>
-              </div>
-            </div>
-
-            {itemSets.length > 0 && (
-              <div className="card flat">
-                {itemSets.map((s) => (
-                  <div className="setline" key={s.id}>
-                    <div className="small"><strong>{s.kind === 'warmup' ? 'Risc.' : `Serie ${itemSets.filter((x) => x.kind === 'working' && x.order <= s.order).length}`}</strong> {describeSet(s)}{s.pain && <span className="badge danger"> dolore</span>}</div>
-                    <button className="iconbtn" aria-label="Modifica serie" onClick={() => setSheet({ edit: s })}><Icon.edit /></button>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {form && (
-              <SetForm
-                form={form} setForm={setForm} ex={ex} machine={machine} loadStep={loadStep} title={form.kind === 'warmup' ? 'Riscaldamento' : `Serie ${setNo}${item.sets ? ` di ${item.sets}` : ''}`}
-                repStart={item.repMin}
-              />
+              <CompareEntry form={form} setForm={setForm} ex={ex} machine={machine} loadStep={loadStep} item={item}
+                prev={prev} itemSets={itemSets} field={field} setField={setField} onEdit={(x) => setSheet({ edit: x })} />
             )}
           </>
         )}
@@ -304,7 +271,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
         <div className="bar-bottom">
           <div>
             <button className="btn primary xl block" disabled={saving} onClick={doSave} aria-busy={saving}>
-              {saving ? 'Salvataggio…' : 'Salva serie'}
+              {saving ? 'Salvataggio…' : form.kind === 'warmup' ? 'Salva riscaldamento' : `Salva serie ${setNo}`}
             </button>
           </div>
         </div>

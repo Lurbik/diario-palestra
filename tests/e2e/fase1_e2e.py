@@ -21,6 +21,15 @@ def check(name, cond, detail=""):
     print(("OK   " if cond else "FAIL ") + name + (f" — {detail}" if detail else ""))
 
 
+def read_load_and_source(page):
+    """Proposta B: il carico si legge selezionando il campo 'Carico'; l'origine è nel title dell'etichetta."""
+    page.get_by_role("button", name="Carico", exact=True).click()
+    page.wait_for_timeout(150)
+    value = page.locator("#cmp-value").input_value()
+    badge = page.locator(".badge.accent").first.get_attribute("title") if page.locator(".badge.accent").count() else ""
+    page.get_by_role("button", name="Complete", exact=True).click()
+    return value, badge or ""
+
 SEED = r"""
 async () => {
   const req = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
@@ -124,18 +133,16 @@ with sync_playwright() as p:
     page.get_by_role("button", name="Inizia Giorno E2E").click()
     page.wait_for_selector("text=E2E Spinta consolidamento")
     page.wait_for_timeout(700)
-    load1 = page.locator(".stepper input").first.input_value()
-    badge1 = page.locator(".badge.accent").first.inner_text() if page.locator(".badge.accent").count() else ""
+    load1, badge1 = read_load_and_source(page)
     page.screenshot(path=f"{OUT}/2-seduta-mantieni-20.png", full_page=True)
     check("Seduta successiva: 'Mantieni 20 kg' → nel campo carico compare 20", load1 == "20", f"campo='{load1}' etichetta='{badge1}'")
     page.get_by_role("button", name="Esercizio successivo").click()
     page.wait_for_selector("h1:has-text('E2E Spinta aumento')")
     page.wait_for_timeout(700)
-    load2 = page.locator(".stepper input").first.input_value()
-    badge2 = page.locator(".badge.accent").first.inner_text() if page.locator(".badge.accent").count() else ""
+    load2, badge2 = read_load_and_source(page)
     page.screenshot(path=f"{OUT}/3-seduta-applica-32-5.png", full_page=True)
     check("Seduta successiva: 'Applica 32,5 kg' → nel campo carico compare 32,5 (da confermare)", load2 == "32,5" and "proposta accettata" in badge2, f"campo='{load2}' etichetta='{badge2}'")
-    reps = page.locator(".stepper input").nth(1).input_value()
+    reps = page.locator("#cmp-value").input_value()
     check("Ripetizioni non precompilate (mai copiate dalla seduta precedente)", reps == "", f"ripetizioni='{reps}'")
     # Termina la seduta vuota senza salvare serie
     page.get_by_role("button", name="Termina").click()

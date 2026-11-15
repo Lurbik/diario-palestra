@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Seduta — due proposte a 390 px</title>
+<style>
+  /* Stessi token dell'app: chiaro caldo, testo blu-nero, accento petrolio. */
+  :root {
+    --bg: #f7f4ee; --surface: #ffffff; --surface-2: #f0ece4; --border: #ddd6ca; --text: #13202b; --muted: #4f5b66;
+    --accent: #0b6870; --accent-bg: #0b6870; --accent-soft: #e3f1f1; --on-accent: #fff; --ok: #1b7340; --ok-bg: #e7f5ec;
+    --warn: #8a5300; --warn-bg: #fff3dd; --radius: 14px;
+    --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9e4da; color: var(--text); font-family: var(--font); font-size: 17px; line-height: 1.4; }
+  .page { max-width: 900px; margin: 0 auto; padding: 24px 16px 40px; }
+  .page > h1 { font-size: 1.5rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .page > p { margin: 0 0 18px; color: var(--muted); }
+  .pair { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+  .col { width: 390px; }
+  .col h2 { font-size: 1.05rem; margin: 0 0 2px; }
+  .col .goal { margin: 0 0 10px; color: var(--muted); font-size: 0.95rem; }
+
+  /* Cornice telefono 390×844 */
+  .phone { width: 390px; height: 844px; background: var(--bg); border-radius: 34px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 10px #1b1f24, 0 18px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; }
+  .status { height: 34px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 14px; font-weight: 600; }
+  .scroll { flex: 1; overflow: auto; padding: 4px 16px 0; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.92rem; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .top { display: flex; align-items: center; gap: 10px; padding: 6px 0 10px; }
+  .top .grow { flex: 1; min-width: 0; }
+  .eyebrow { font-size: 0.8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .ghost { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); font-weight: 600; }
+  .exname { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; margin: 0; line-height: 1.15; }
+  .machine { margin: 2px 0 0; color: var(--muted); font-size: 0.95rem; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { min-width: 48px; min-height: 48px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-weight: 700; font-size: 1.05rem; }
+  .chip[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent-bg); color: var(--on-accent); }
+  .chip.wide { padding: 0 16px; font-weight: 600; font-size: .98rem; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .between { justify-content: space-between; }
+  .label { font-weight: 700; font-size: .95rem; }
+
+  .stepper { display: grid; grid-template-columns: 56px 1fr 56px; gap: 8px; }
+  .stepper button { min-height: 56px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); font-size: 1.6rem; font-weight: 700; }
+  .stepper output { min-height: 56px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; font-weight: 800; }
+  .prefill { font-size: .82rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px; }
+
+  .dock { flex: none; padding: 10px 16px 14px; background: linear-gradient(to top, var(--bg) 78%, rgba(247,244,238,0)); }
+  .save { width: 100%; min-height: 62px; border: none; border-radius: 14px; background: var(--accent-bg); color: var(--on-accent); font-size: 1.2rem; font-weight: 800; }
+  .save[disabled] { opacity: .45; cursor: not-allowed; }
+  .hint { min-height: 22px; text-align: center; font-size: .9rem; color: var(--muted); margin-top: 6px; }
+
+  .rest { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--ok-bg); border: 1px solid var(--ok); border-radius: var(--radius); padding: 10px 14px; }
+  .rest .t { font-size: 1.9rem; font-weight: 800; }
+  .saved { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .linkbtn { min-height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-weight: 600; font-size: .92rem; }
+  .toast { position: absolute; left: 12px; right: 12px; bottom: 108px; background: var(--text); color: #fff; border-radius: 14px; padding: 10px 12px; display: none; align-items: center; gap: 8px; font-size: .95rem; }
+  .toast.show { display: flex; }
+  .toast button { min-height: 44px; background: transparent; color: #fff; border: 1px solid #fff; border-radius: 10px; padding: 0 10px; font-weight: 600; }
+
+  /* --- B: tabella di confronto --- */
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 1rem; }
+  table.cmp th, table.cmp td { padding: 8px 6px; text-align: right; border-bottom: 1px solid var(--border); }
+  table.cmp th:first-child, table.cmp td:first-child { text-align: left; }
+  table.cmp thead th { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  table.cmp td.today { background: var(--accent-soft); font-weight: 800; }
+  table.cmp td.today.active { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .delta { font-size: .85rem; font-weight: 700; }
+  .delta.up { color: var(--ok); } .delta.down { color: var(--warn); } .delta.eq { color: var(--muted); }
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .seg button { min-height: 48px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); font-weight: 700; font-size: .95rem; }
+  .seg button[aria-pressed="true"] { background: var(--accent-bg); color: #fff; border-color: var(--accent-bg); }
+
+  .notes { max-width: 820px; margin: 26px auto 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+  .notes h2 { font-size: 1.05rem; margin: 0 0 6px; }
+  .notes table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  .notes td, .notes th { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  .gap { height: 10px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Schermata Seduta · due proposte a 390 px</h1>
+  <p>Stessi dati: lat machine, serie 1 di 2, ultima volta 55 kg. Da registrare: 55 kg × 6 complete + 3 parziali extra, RIR 1, poi salva e parte il recupero. Le anteprime sono interattive: prova a farlo in entrambe.</p>
+
+  <div class="pair">
+    <!-- ===================== PROPOSTA A ===================== -->
+    <div class="col">
+      <h2>A · Una mano</h2>
+      <p class="goal">Ogni valore a un tocco nella metà bassa dello schermo.</p>
+      <div class="phone" id="A" aria-label="Proposta A">
+        <div class="status"><span class="num">18:42</span><span>Upper A</span></div>
+        <div class="scroll">
+          <div class="top">
+            <div class="grow">
+              <div class="eyebrow">Esercizio 2 di 6 · Serie <span data-set>1</span> di 2</div>
+            </div>
+            <button class="ghost" type="button" aria-label="Elenco esercizi">Elenco</button>
+          </div>
+          <h3 class="exname">Lat machine presa larga</h3>
+          <p class="machine">Lat machine (presa larga) · obiettivo 6–8 · RIR 1–2</p>
+          <div data-restbox style="margin-top:10px"></div>
+
+          <div class="card" style="margin-top:12px">
+            <div class="row between"><span class="label">Ultima volta · 13 nov</span><span class="small muted">stessa macchina</span></div>
+            <div class="num" style="font-size:1.08rem;margin-top:4px"><strong>55 kg × 7</strong> RIR 1 · +2 parziali</div>
+            <div class="num muted small">55 kg × 6 RIR 0 · +3 parziali</div>
+            <div data-savedlist></div>
+          </div>
+
+          <div class="gap"></div>
+          <div class="row between"><span class="label">Carico (kg pacco pesi)</span><span class="prefill" data-prefill>precompilato: 13 nov</span></div>
+          <div class="stepper" style="margin-top:6px">
+            <button type="button" data-load="-2.5" aria-label="Meno 2,5 kg">−</button><output class="num" data-loadout>55</output><button type="button" data-load="2.5" aria-label="Più 2,5 kg">+</button>
+          </div>
+
+          <div class="gap"></div>
+          <div class="label">Ripetizioni complete</div>
+          <div class="chips" role="group" aria-label="Ripetizioni complete" style="margin-top:6px" data-group="reps">
+            <button class="chip" type="button" data-v="4">4</button><button class="chip" type="button" data-v="5">5</button><button class="chip" type="button" data-v="6">6</button><button class="chip" type="button" data-v="7">7</button><button class="chip" type="button" data-v="8">8</button><button class="chip" type="button" data-v="9">9</button>
+          </div>
+
+          <div class="gap"></div>
+          <div class="label">Parziali extra <span class="small muted">· dopo l'ultima completa, non contano</span></div>
+          <div class="chips" role="group" aria-label="Parziali extra" style="margin-top:6px" data-group="partials">
+            <button class="chip" type="button" data-v="0" aria-pressed="true">0</button><button class="chip" type="button" data-v="1">1</button><button class="chip" type="button" data-v="2">2</button><button class="chip" type="button" data-v="3">3</button><button class="chip" type="button" data-v="4">4+</button>
+          </div>
+
+          <div class="gap"></div>
+          <div class="label">RIR</div>
+          <div class="chips" role="group" aria-label="RIR" style="margin-top:6px" data-group="rir">
+            <button class="chip" type="button" data-v="0">0</button><button class="chip" type="button" data-v="1">1</button><button class="chip" type="button" data-v="2">2</button><button class="chip" type="button" data-v="3">3+</button><button class="chip wide" type="button" data-v="nd">Non so</button>
+          </div>
+          <div class="gap"></div>
+          <div class="row"><button class="linkbtn" type="button">Dettagli serie</button><button class="linkbtn" type="button">Fastidio</button></div>
+
+          <div style="height:16px"></div>
+        </div>
+        <div class="toast" role="status" data-toast><span class="grow" data-toasttext></span><button type="button" data-undo>Annulla</button><button type="button">Correggi</button></div>
+        <div class="dock"><button class="save" type="button" data-save disabled>Salva serie</button><div class="hint" data-hint>Scegli le ripetizioni complete</div></div>
+      </div>
+    </div>
+
+    <!-- ===================== PROPOSTA B ===================== -->
+    <div class="col">
+      <h2>B · Confronto in evidenza</h2>
+      <p class="goal">Oggi accanto all'ultima volta, serie per serie.</p>
+      <div class="phone" id="B" aria-label="Proposta B">
+        <div class="status"><span class="num">18:42</span><span>Upper A</span></div>
+        <div class="scroll">
+          <div class="top">
+            <div class="grow"><div class="eyebrow">Esercizio 2 di 6</div></div>
+            <button class="ghost" type="button" aria-label="Elenco esercizi">Elenco</button>
+          </div>
+          <h3 class="exname">Lat machine presa larga</h3>
+          <p class="machine">Lat machine (presa larga) · obiettivo 6–8 · RIR 1–2</p>
+          <div data-restbox style="margin-top:10px"></div>
+
+          <div class="card" style="margin-top:12px;padding:6px 10px">
+            <table class="cmp num" aria-label="Confronto con l'ultima volta">
+              <thead><tr><th>Serie</th><th>13 nov</th><th>Oggi</th></tr></thead>
+              <tbody>
+                <tr><td>1 · carico</td><td>55 kg</td><td class="today active" data-b="load1">55 kg</td></tr>
+                <tr><td>complete</td><td>7</td><td class="today active" data-b="reps1">—</td></tr>
+                <tr><td>parziali</td><td>+2</td><td class="today active" data-b="part1">0</td></tr>
+                <tr><td>RIR</td><td>1</td><td class="today active" data-b="rir1">—</td></tr>
+                <tr><td>2 · carico</td><td>55 kg</td><td class="today" data-b="load2">—</td></tr>
+                <tr><td>complete</td><td>6</td><td class="today" data-b="reps2">—</td></tr>
+                <tr><td>parziali</td><td>+3</td><td class="today" data-b="part2">—</td></tr>
+                <tr><td>RIR</td><td>0</td><td class="today" data-b="rir2">—</td></tr>
+              </tbody>
+            </table>
+            <div class="small" style="padding:6px 2px 4px" data-bdelta><span class="delta eq">Serie 1: inserisci le ripetizioni per vedere la differenza</span></div>
+          </div>
+
+          <div class="gap"></div>
+          <div class="seg" role="group" aria-label="Valore da modificare" data-field>
+            <button type="button" data-f="load">Carico</button><button type="button" data-f="reps" aria-pressed="true">Complete</button><button type="button" data-f="part">Parziali</button><button type="button" data-f="rir">RIR</button>
+          </div>
+          <div class="gap"></div>
+          <div class="stepper"><button type="button" data-bstep="-1" aria-label="Diminuisci">−</button><output class="num" data-bout>—</output><button type="button" data-bstep="1" aria-label="Aumenta">+</button></div>
+          <div class="row" style="margin-top:8px"><button class="linkbtn" type="button" data-bnd>RIR non so</button><button class="linkbtn" type="button">Fastidio</button></div>
+          <div style="height:16px"></div>
+        </div>
+        <div class="toast" role="status" data-toast><span class="grow" data-toasttext></span><button type="button" data-undo>Annulla</button><button type="button">Correggi</button></div>
+        <div class="dock"><button class="save" type="button" data-save disabled>Salva serie 1</button><div class="hint" data-hint>Inserisci le ripetizioni complete</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h2>Confronto rapido · inserire 6 complete + 3 parziali, RIR 1</h2>
+    <table>
+      <tr><th></th><th>A · Una mano</th><th>B · Confronto</th></tr>
+      <tr><td>Tocchi (carico già 55)</td><td><strong>4</strong>: 6 · 3 · 1 · Salva</td><td><strong>14</strong>: + ×6 · Parziali · + ×3 · RIR · + · Salva (oppure tastiera numerica)</td></tr>
+      <tr><td>Dove sono i comandi</td><td>Tutto nella metà bassa; il pollice non sale</td><td>Tabella in alto da leggere, comandi in basso</td></tr>
+      <tr><td>Serie precedente</td><td>Una riga sopra i comandi, con la data</td><td>Colonna accanto a "Oggi", con differenza calcolata</td></tr>
+      <tr><td>Parziali</td><td>Riga propria, mai sommate alle complete</td><td>Riga propria, mai sommate alle complete</td></tr>
+      <tr><td>Rischio</td><td>Più elementi visibili insieme</td><td>Più passaggi; serve scegliere il campo prima di cambiare il valore</td></tr>
+    </table>
+    <p class="small muted" style="margin:8px 0 0">Anteprime con dati fittizi; nessun dato viene salvato. Il carico è precompilato e va confermato con "Salva serie"; ripetizioni e RIR non vengono mai copiati dall'ultima volta.</p>
+  </div>
+</div>
+
+<script>
+  // ------- Comportamento minimo per provare i due flussi (nessun salvataggio reale) -------
+  const fmt = (n) => String(n).replace('.', ',');
+  function restBox(root, label) {
+    const box = root.querySelector('[data-restbox]');
+    const start = Date.now();
+    box.innerHTML = '<div class="rest" aria-live="off"><div><div class="eyebrow">Recupero</div><div class="t num" data-rt>0:00</div><div class="small muted">programmato 2:30</div></div><button class="linkbtn" type="button">Salta</button></div>';
+    clearInterval(root._rt);
+    root._rt = setInterval(() => { const s = Math.floor((Date.now() - start) / 1000); const el = box.querySelector('[data-rt]'); if (el) el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }, 250);
+    const t = root.querySelector('[data-toast]');
+    root.querySelector('[data-toasttext]').textContent = label;
+    t.classList.add('show');
+    clearTimeout(root._tt); root._tt = setTimeout(() => t.classList.remove('show'), 6000);
+  }
+
+  // ---------- A ----------
+  (() => {
+    const A = document.getElementById('A');
+    const st = { load: 55, reps: null, partials: 0, rir: null, set: 1 };
+    const save = A.querySelector('[data-save]'), hint = A.querySelector('[data-hint]');
+    const sync = () => {
+      A.querySelector('[data-loadout]').textContent = fmt(st.load);
+      for (const g of ['reps', 'partials', 'rir']) A.querySelectorAll(`[data-group="${g}"] .chip`).forEach((b) => b.setAttribute('aria-pressed', String(String(st[g]) === b.dataset.v)));
+      save.disabled = st.reps == null;
+      hint.textContent = st.reps == null ? 'Scegli le ripetizioni complete' : `${fmt(st.load)} kg × ${st.reps}${st.partials ? ` + ${st.partials} parziali` : ''} · RIR ${st.rir == null ? 'non inserito' : st.rir === 'nd' ? 'non so' : st.rir}`;
+    };
+    A.querySelectorAll('[data-load]').forEach((b) => b.onclick = () => { st.load = Math.max(0, st.load + Number(b.dataset.load)); A.querySelector('[data-prefill]').textContent = 'modificato'; sync(); });
+    A.querySelectorAll('[data-group] .chip').forEach((b) => b.onclick = () => { const g = b.closest('[data-group]').dataset.group; const v = b.dataset.v === 'nd' ? 'nd' : Number(b.dataset.v); st[g] = st[g] === v && g !== 'partials' ? null : v; sync(); });
+    save.onclick = () => {
+      if (st.reps == null) return;
+      const line = `Serie ${st.set}: ${fmt(st.load)} kg × ${st.reps}${st.partials ? ` + ${st.partials} parziali extra` : ''} · RIR ${st.rir == null ? '—' : st.rir === 'nd' ? 'non so' : st.rir}`;
+      A.querySelector('[data-savedlist]').insertAdjacentHTML('beforeend', `<div class="saved"><span class="num"><strong>Oggi · ${line}</strong></span><button class="linkbtn" type="button">Correggi</button></div>`);
+      A.dataset.saved = JSON.stringify({ load: st.load, reps: st.reps, partials: st.partials, rir: st.rir });
+      restBox(A, `Salvata ✓ ${fmt(st.load)} kg × ${st.reps}${st.partials ? ` + ${st.partials}p` : ''}`);
+      st.set = 2; A.querySelector('[data-set]').textContent = '2'; st.reps = null; st.partials = 0; st.rir = null; sync();
+    };
+    A.querySelector('[data-undo]').onclick = () => { A.querySelector('[data-savedlist]').innerHTML = ''; A.querySelector('[data-restbox]').innerHTML = ''; A.querySelector('[data-toast]').classList.remove('show'); st.set = 1; A.querySelector('[data-set]').textContent = '1'; delete A.dataset.saved; };
+    sync();
+  })();
+
+  // ---------- B ----------
+  (() => {
+    const B = document.getElementById('B');
+    const prevSets = [{ reps: 7, part: 2, rir: 1, load: 55 }, { reps: 6, part: 3, rir: 0, load: 55 }];
+    const st = { set: 1, load: 55, reps: null, part: 0, rir: null, field: 'reps' };
+    const done = [];
+    const save = B.querySelector('[data-save]'), hint = B.querySelector('[data-hint]'), out = B.querySelector('[data-bout]');
+    const cell = (k) => B.querySelector(`[data-b="${k}"]`);
+    const rirTxt = (r) => (r == null ? '—' : r === 'nd' ? 'non so' : r);
+    const sync = () => {
+      for (const i of [1, 2]) {
+        const v = done[i - 1] ?? (i === st.set ? st : null);
+        cell('load' + i).textContent = v ? `${fmt(v.load)} kg` : '—';
+        cell('reps' + i).textContent = v && v.reps != null ? v.reps : '—';
+        cell('part' + i).textContent = v ? (v.part ? `+${v.part}` : '0') : '—';
+        cell('rir' + i).textContent = v ? rirTxt(v.rir) : '—';
+      }
+      B.querySelectorAll('td.today').forEach((td) => td.classList.toggle('active', td.dataset.b.endsWith(String(st.set)) && done.length < 2));
+      B.querySelectorAll('[data-field] button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === st.field)));
+      const v = st[st.field];
+      out.textContent = v == null ? '—' : st.field === 'load' ? fmt(v) : v === 'nd' ? '?' : v;
+      const pv = prevSets[st.set - 1];
+      const d = B.querySelector('[data-bdelta]');
+      if (st.reps == null) d.innerHTML = `<span class="delta eq">Serie ${st.set}: inserisci le ripetizioni per vedere la differenza</span>`;
+      else if (st.load === pv.load) { const diff = st.reps - pv.reps; d.innerHTML = `<span class="delta ${diff > 0 ? 'up' : diff < 0 ? 'down' : 'eq'}">Serie ${st.set} a parità di carico: ${diff > 0 ? '+' : ''}${diff} complete rispetto al 13 nov</span>`; }
+      else d.innerHTML = '<span class="delta eq">Carico diverso dal 13 nov: confronto delle ripetizioni non diretto</span>';
+      save.disabled = st.reps == null;
+      save.textContent = `Salva serie ${st.set}`;
+      hint.textContent = st.reps == null ? 'Inserisci le ripetizioni complete' : `${fmt(st.load)} kg × ${st.reps}${st.part ? ` + ${st.part} parziali` : ''} · RIR ${st.rir == null ? 'non inserito' : rirTxt(st.rir)}`;
+    };
+    B.querySelectorAll('[data-field] button').forEach((b) => b.onclick = () => { st.field = b.dataset.f; sync(); });
+    B.querySelectorAll('[data-bstep]').forEach((b) => b.onclick = () => {
+      const dir = Number(b.dataset.bstep), f = st.field;
+      if (f === 'load') st.load = Math.max(0, st.load + dir * 2.5);
+      else if (f === 'reps') st.reps = Math.max(0, (st.reps ?? 0) + dir);
+      else if (f === 'part') st.part = Math.max(0, st.part + dir);
+      else st.rir = Math.max(0, Math.min(5, (typeof st.rir === 'number' ? st.rir : -1) + dir));
+      sync();
+    });
+    B.querySelector('[data-bnd]').onclick = () => { st.rir = 'nd'; st.field = 'rir'; sync(); };
+    save.onclick = () => {
+      if (st.reps == null || done.length >= 2) return;
+      const rec = { load: st.load, reps: st.reps, part: st.part, rir: st.rir };
+      done.push(rec);
+      B.dataset.saved = JSON.stringify({ load: rec.load, reps: rec.reps, partials: rec.part, rir: rec.rir });
+      restBox(B, `Salvata ✓ ${fmt(rec.load)} kg × ${rec.reps}${rec.part ? ` + ${rec.part}p` : ''}`);
+      st.set = Math.min(2, done.length + 1); st.reps = null; st.part = 0; st.rir = null; st.field = 'reps';
+      sync();
+    };
+    B.querySelector('[data-undo]').onclick = () => { done.pop(); st.set = done.length + 1; B.querySelector('[data-restbox]').innerHTML = ''; B.querySelector('[data-toast]').classList.remove('show'); delete B.dataset.saved; sync(); };
+    sync();
+  })();
+</script>
+</body>
+</html>

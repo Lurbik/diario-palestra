@@ -25,7 +25,7 @@ export function SessionTools({ session, ex, idx, exercises }: { session: Session
   return (
     <>
       <p className="small muted" style={{ marginTop: 0 }}>{ex.primaryMuscles.map((m) => MUSCLE_LABEL[m]).join(', ')}{ex.secondaryMuscles.length ? ` · secondari: ${ex.secondaryMuscles.map((m) => MUSCLE_LABEL[m]).join(', ')}` : ''}</p>
-      <div className="chips" role="group" aria-label="Azioni sull'esercizio">
+      <div className="chips scroll-x" role="group" aria-label="Azioni sull'esercizio">
         <button className="chip" onClick={() => setMode('how')}><Icon.info /> Come si fa</button>
         <button className="chip" onClick={() => setMode('busy')}>Macchina occupata</button>
         <button className="chip" onClick={() => setMode('time')}><Icon.clock /> Ho meno tempo</button>
