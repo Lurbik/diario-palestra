@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, kvSet } from '../db/db';
 import type { Exercise, Session, SetEntry, TargetVersion } from '../db/types';
 import { Check, Chip, Field, Icon, LineChart, NumInput, Sheet, Tabs, go, useSettings, useToast } from '../ui/kit';
-import { dailyWeights, movingAverage, proposeCalories, dataQuality, proteinReference, mifflinStJeor } from '../lib/calories';
+import { dailyWeights, movingAverage, proposeCalories, dataQuality, proteinReference, mifflinStJeor, intakeStats } from '../lib/calories';
 import { suggestProgression, e1rmEpley, progressionReps, type Exposure, type Suggestion } from '../lib/progression';
 import { detectStall } from '../lib/stall';
 import { configKey, setsPerMuscle } from '../lib/workout';
@@ -11,9 +11,9 @@ import { addDays, dateKey, formatDateIt, weekStart } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { MUSCLE_LABEL } from '../ui/labels';
 import { WeightSheet } from './WeightSheet';
-import { sumNutrients } from '../lib/nutrition';
 import { patchSettings } from '../db/bootstrap';
 import { BodyMapTab } from './BodyMap';
+import { loadWriteFor } from '../lib/loadDecision';
 
 export function ProgressScreen({ route }: { route: string[] }) {
   const sub = (route[1] as 'peso' | 'allenamento' | 'muscoli' | 'recupero') || 'peso';
@@ -46,16 +46,11 @@ function WeightTab() {
   const daily = dailyWeights(weights);
   const ma = movingAverage(daily, 7);
   const target = targets.filter((t) => t.effectiveFrom <= today).at(-1) ?? null;
-  const intakeByDay = new Map<string, number>();
-  let intakeIncomplete = false;
-  for (const d of completeDays.filter((x) => x >= from14)) {
-    const s = sumNutrients(diary14.filter((e) => e.dateKey === d).map((e) => e.nutrients));
-    if (s.incomplete.kcal) intakeIncomplete = true;
-    if (s.values.kcal != null) intakeByDay.set(d, s.values.kcal);
-  }
-  const avgIntake = intakeByDay.size ? [...intakeByDay.values()].reduce((a, b) => a + b, 0) / intakeByDay.size : null;
-  const proposal = proposeCalories({ weights, completeDiaryDays: completeDays, avgIntakeKcal: avgIntake, targetKcal: target?.kcal ?? null, lastTargetChange: target ? target.effectiveFrom : null, today, rules: settings.calorieRules, goal: settings.profile.goal ?? undefined });
-  const q = dataQuality(weights, completeDays, today, settings.calorieRules);
+  // Solo giorni dichiarati completi con tutte le kcal note: mancante ≠ zero, giorno vuoto ≠ 0 kcal.
+  const intake = intakeStats(diary14, completeDays, from14, today);
+  const avgIntake = intake.avgKcal;
+  const proposal = proposeCalories({ weights, completeDiaryDays: intake.usableDays, avgIntakeKcal: avgIntake, targetKcal: target?.kcal ?? null, lastTargetChange: target ? target.effectiveFrom : null, today, rules: settings.calorieRules, goal: settings.profile.goal ?? undefined });
+  const q = dataQuality(weights, intake.usableDays, today, settings.calorieRules);
   const lastKg = daily.at(-1)?.kg ?? settings.profile.declaredWeightKg;
   const ref = lastKg ? proteinReference(lastKg) : null;
   const weeks = useMemo(() => {
@@ -98,7 +93,7 @@ function WeightTab() {
         <h3>{proposal.title}</h3>
         <ul className="small">{proposal.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
         <details><summary>Qualità dei dati</summary>
-          <ul className="small"><li>Storico peso: {q.spanDays} giorni</li><li>Pesate ultime due settimane: {q.weighInsByWeek.join(' e ')}</li><li>Giorni di diario dichiarati completi (14 gg): {q.completeDays}{intakeIncomplete ? ' — alcuni con valori mancanti' : ''}</li><li>Consumo medio nei giorni completi: {avgIntake != null ? `${Math.round(avgIntake)} kcal` : '—'}</li></ul>
+          <ul className="small"><li>Storico peso: {q.spanDays} giorni</li><li>Pesate ultime due settimane: {q.weighInsByWeek.join(' e ')}</li><li>Giorni completi con valori noti (14 gg): {q.completeDays}{intake.unknownDays.length ? ` · ${intake.unknownDays.length} esclusi per valori mancanti` : ''}{intake.emptyDays.length ? ` · ${intake.emptyDays.length} senza voci (non contati come 0)` : ''}</li><li>Consumo medio nei giorni completi: {avgIntake != null ? `${Math.round(avgIntake)} kcal` : '—'}</li></ul>
           <p className="small muted">Soglie di qualità del dato configurabili, non validazione scientifica. Nessun calcolo "7700 kcal per kg".</p>
         </details>
         {(proposal.kind === 'increase' || proposal.kind === 'decrease') && (
@@ -233,10 +228,18 @@ function TrainingTab() {
     return { ex, exps, sug, stall };
   }).filter(Boolean) as { ex: Exercise; exps: Exposure[]; sug: Suggestion; stall: ReturnType<typeof detectStall> }[];
 
-  const decide = async (ex: Exercise, sug: Suggestion, decision: 'accepted' | 'kept' | 'modified') => {
-    await db.decisions.add({ id: uid(), at: Date.now(), scope: 'exercise', refId: configKey(ex), ruleId: sug.ruleId, decision, detail: sug.title, reviewAfter: addDays(dateKey(), 14) });
-    if (decision === 'accepted' && sug.proposedLoad != null) await kvSet(`acceptedLoad:${configKey(ex)}`, { load: sug.proposedLoad, at: Date.now() });
-    toast({ text: decision === 'accepted' ? 'Accettato: il carico proposto verrà precompilato (da confermare) nella prossima seduta' : 'Decisione registrata' });
+  const [modify, setModify] = useState<{ ex: Exercise; sug: Suggestion } | null>(null);
+  const [modLoad, setModLoad] = useState<number | null>(null);
+  const decide = async (ex: Exercise, sug: Suggestion, decision: 'accepted' | 'kept' | 'modified', chosen?: number | null) => {
+    const now = Date.now();
+    const w = loadWriteFor(sug, decision, now, chosen);
+    const key = `acceptedLoad:${configKey(ex)}`;
+    const prevAccepted = (await db.kv.get(key))?.value ?? null;
+    await db.decisions.add({ id: uid(), at: now, scope: 'exercise', refId: configKey(ex), ruleId: sug.ruleId, decision,
+      detail: `${sug.title}${w.action === 'set' ? ` → ${fmtNum(w.value.load, 2)} kg` : ''}${prevAccepted ? ` (prima: ${JSON.stringify(prevAccepted)})` : ''}`, reviewAfter: addDays(dateKey(), 14) });
+    if (w.action === 'set') await kvSet(key, w.value);
+    if (w.action === 'clear') await db.kv.delete(key);
+    toast({ text: w.action === 'set' ? `Applicato: ${fmtNum(w.value.load, 2)} kg verranno precompilati (da confermare) nella prossima seduta` : w.action === 'clear' ? `Mantieni ${fmtNum(sug.currentLoad ?? null, 2)} kg: nessun carico cambiato` : 'Decisione registrata, nessun carico modificato' });
   };
 
   return (
@@ -269,12 +272,21 @@ function TrainingTab() {
                 <strong>Stallo:</strong> {stall.title}. {stall.reasons.join(' ')}{stall.checklist.length > 0 && <ol>{stall.checklist.map((c) => <li key={c}>{c.replace(/^\d\.\s/, '')}</li>)}</ol>}
               </div>
             </details>
-            {(sug.kind === 'increase' || sug.kind === 'consolidate' || sug.kind === 'review') && (
+            {sug.kind === 'increase' && sug.proposedLoad != null && (
               <div className="row wrap mt">
-                <button className="btn sm primary" onClick={() => decide(ex, sug, 'accepted')}>Accetta</button>
-                <button className="btn sm" onClick={() => decide(ex, sug, 'kept')}>Mantieni</button>
-                <button className="btn sm" onClick={() => decide(ex, sug, 'modified')}>Modifica</button>
+                <button className="btn sm primary" onClick={() => decide(ex, sug, 'accepted')}>Applica {fmtNum(sug.proposedLoad, 2)} kg</button>
+                <button className="btn sm" onClick={() => decide(ex, sug, 'kept')}>Mantieni {fmtNum(sug.currentLoad ?? null, 2)} kg</button>
+                <button className="btn sm" onClick={() => { setModify({ ex, sug }); setModLoad(sug.currentLoad ?? null); }}>Scegli io</button>
               </div>
+            )}
+            {sug.kind === 'consolidate' && (
+              <div className="row wrap mt">
+                <button className="btn sm primary" onClick={() => decide(ex, sug, 'kept')}>Mantieni {fmtNum(sug.currentLoad ?? null, 2)} kg</button>
+                <button className="btn sm" onClick={() => { setModify({ ex, sug }); setModLoad(sug.currentLoad ?? null); }}>Scegli io</button>
+              </div>
+            )}
+            {sug.kind === 'review' && (
+              <div className="row wrap mt"><button className="btn sm" onClick={() => decide(ex, sug, 'kept')}>Ho rivisto, mantieni</button></div>
             )}
             {last && <p className="small muted mt">Ultima decisione: {({ accepted: 'accettata', kept: 'mantenuto', modified: 'modificata', postponed: 'rinviata' })[last.decision]} il {new Date(last.at).toLocaleDateString('it-IT')} ({last.detail}).</p>}
             <button className="btn sm ghost" onClick={() => setDetail({ ex, exps })}>Storico e grafico</button>
@@ -282,6 +294,13 @@ function TrainingTab() {
         );
       })}
       {detail && <ExerciseHistory ex={detail.ex} exps={detail.exps} showE1rm={settings.showE1rm} onClose={() => setDetail(null)} />}
+      {modify && (
+        <Sheet title={`Carico per ${modify.ex.name}`} onClose={() => setModify(null)}>
+          <NumInput label="Carico da precompilare nella prossima seduta (kg)" value={modLoad} onChange={setModLoad} />
+          <p className="small muted">Vale solo per questa configurazione ed è sempre da confermare con "Salva serie". La scheda non cambia.</p>
+          <button className="btn primary block" disabled={!modLoad} onClick={async () => { await decide(modify.ex, modify.sug, 'modified', modLoad); setModify(null); }}>Salva scelta</button>
+        </Sheet>
+      )}
     </>
   );
 }

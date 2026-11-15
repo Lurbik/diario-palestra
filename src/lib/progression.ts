@@ -29,8 +29,12 @@ export interface Suggestion {
   reason: string;
   dataUsed: string[];
   limits: string[];
+  /** Carico da APPLICARE se l'utente accetta: valorizzato solo per una vera proposta di aumento. */
   proposedLoad: number | null;
   jumpPct: number | null;
+  /** Solo informazione: carico attuale confrontato e prossimo scatto disponibile dell'attrezzatura. */
+  currentLoad?: number | null;
+  nextStep?: { incrementKg: number; load: number; pct: number | null } | null;
   ruleId: string;
 }
 
@@ -121,9 +125,9 @@ export function suggestProgression(args: {
     const inc = incs[0];
     const pct = load > 0 ? inc / load : null;
     if (pct != null && pct > policy.maxJumpPct) {
-      return { ...base, kind: 'consolidate', ruleId: 'jump_too_big', proposedLoad: load + inc, jumpPct: pct, title: `Salto disponibile grande (+${fmt(pct * 100)}%)`, reason: `Il più piccolo incremento disponibile (+${fmt(inc)} kg) vale il ${fmt(pct * 100)}% del carico. Valuta di mantenere e consolidare, ampliare il range di ripetizioni o usare microcarichi se l'attrezzatura li consente (senza aggiunte non approvate dal produttore).` };
+      return { ...base, kind: 'consolidate', ruleId: 'jump_too_big', proposedLoad: null, jumpPct: pct, currentLoad: load, nextStep: { incrementKg: inc, load: load + inc, pct }, title: `Mantieni ${fmt(load)} kg: lo scatto successivo è di ${fmt(inc)} kg (+${fmt(pct * 100)}%)`, reason: `Il più piccolo incremento disponibile (+${fmt(inc)} kg) vale il ${fmt(pct * 100)}% del carico. Valuta di mantenere e consolidare, ampliare il range di ripetizioni o usare microcarichi se l'attrezzatura li consente (senza aggiunte non approvate dal produttore).` };
     }
-    return { ...base, kind: 'increase', ruleId: 'double_progression', proposedLoad: load + inc, jumpPct: pct, title: `Proposta: ${fmt(load)} → ${fmt(load + inc)} kg`, reason: `In ${last.length} sedute comparabili tutte le serie hanno raggiunto ${args.target.repMax} ripetizioni valide, RIR almeno al minimo del target, nessun dolore o problema tecnico. Dopo l'aumento è normale tornare verso il basso del range.` };
+    return { ...base, kind: 'increase', ruleId: 'double_progression', proposedLoad: load + inc, jumpPct: pct, currentLoad: load, nextStep: { incrementKg: inc, load: load + inc, pct }, title: `Proposta: ${fmt(load)} → ${fmt(load + inc)} kg`, reason: `In ${last.length} sedute comparabili tutte le serie hanno raggiunto ${args.target.repMax} ripetizioni valide, RIR almeno al minimo del target, nessun dolore o problema tecnico. Dopo l'aumento è normale tornare verso il basso del range.` };
   }
   // Tendenza al peggioramento su più sedute comparabili allo stesso carico
   const sameLoadExps = exps.filter((e) => sameLoad(e) === load).slice(-3);

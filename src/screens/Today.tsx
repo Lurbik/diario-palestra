@@ -9,7 +9,7 @@ import { fmtNum, uid } from '../lib/id';
 import { estimateItemMin, sessionTimes } from '../lib/workout';
 import { planMeals } from '../lib/planner';
 import { eatBatchPortion, eatRecipeDirect, ShortfallError } from '../lib/inventory';
-import { shoppingNeeds, stockByFood } from '../lib/recipes';
+import { shoppingNeeds } from '../lib/recipes';
 import { planSleep, sleepConflicts, tomorrowWake } from '../lib/sleep';
 import { sumNutrients } from '../lib/nutrition';
 import { OnboardingSheet } from './Onboarding';
@@ -62,15 +62,15 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
     const remainingSlots = windows.filter((w) => !logged.has(w.slot) && w.to >= hm).length || 1;
     const out: { recipe: Recipe; servings: number; fromBatch: boolean; label: string }[] = [];
     const tried = new Set<string>();
-    const stock = stockByFood(lots, today);
-    const haveAll = (r: Recipe) => r.ingredients.every((i) => (stock.get(`${i.foodId}|${i.unit}`) ?? 0) >= i.qty);
     for (let k = 0; k < 3; k++) {
       // k=1 "più comoda": meno tempo attivo; k=2 "con quello che hai": solo se la dispensa è compilata
       if (k === 2 && !kvv('pantryTracking')) continue;
-      const pool = recipes.filter((r) => !tried.has(r.id) && (k !== 2 || haveAll(r)));
+      const pool = recipes.filter((r) => !tried.has(r.id));
       const res = planMeals({
         slots: [{ dateKey: today, slot: nextSlot, maxActiveMin: k === 1 ? Math.min(cookToday ?? 15, 10) : cookToday, mustBePortable: atWork, coldChainOk: settings.profile.coolerBag === 'si' || settings.profile.fridgeAway === 'si' }],
-        recipes: pool, foods: fMap, lots, batches, rules,
+        recipes: pool, foods: fMap, lots, batches, rules, pantryTracked: !!kvv('pantryTracking'),
+        // "con quello che hai": fattibilità calcolata per PORZIONE (o lotto intero se indivisibile)
+        stockMode: k === 2 ? 'pantry_only' : 'can_buy',
         kcalTarget: remainingKcal != null ? remainingKcal / remainingSlots : null, proteinTarget: settings.proteinTargetG ? settings.proteinTargetG / Math.max(3, windows.length) : null,
         locked: [], previous: [], today, feedback: (kvv('recipeFeedback') as Record<string, never>) ?? {}, beamWidth: 6
       });

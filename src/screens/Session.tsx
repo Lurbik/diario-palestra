@@ -10,6 +10,7 @@ import { fmtNum, uid } from '../lib/id';
 import { setUnsaved } from '../lib/pwa';
 import { proposedRir } from '../lib/progression';
 import { SessionTools } from './SessionTools';
+import { prefillLoad } from '../lib/loadDecision';
 
 export interface FormState {
   id: string;
@@ -89,8 +90,12 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
   const ex = item ? exercises.get(item.exerciseId) : undefined;
   const machine = useLiveQuery(async () => (ex?.machineId ? db.machines.get(ex.machineId) : undefined), [ex?.machineId]);
   const ck = ex ? configKey(ex) : '';
-  const prev = useLiveQuery(async () => (ck ? previousPerformance(ck, session.id) : null), [ck, session.id]);
-  const accepted = useLiveQuery(async () => (ck ? (await kvGet<{ load: number; at: number } | null>(`acceptedLoad:${ck}`, null)) : null), [ck]);
+  // Ogni lettura porta con sé la configurazione a cui appartiene: durante il cambio di esercizio
+  // useLiveQuery restituisce ancora il risultato precedente, che NON deve finire nella precompilazione.
+  const prevQ = useLiveQuery(async () => ({ ck, v: ck ? await previousPerformance(ck, session.id) : null }), [ck, session.id]);
+  const accQ = useLiveQuery(async () => ({ ck, v: ck ? await kvGet<{ load: number; at: number } | null>(`acceptedLoad:${ck}`, null) : null }), [ck]);
+  const prev = prevQ && prevQ.ck === ck ? prevQ.v : undefined;
+  const accepted = accQ && accQ.ck === ck ? accQ.v : undefined;
   const itemSets = sets.filter((s) => s.itemIndex === idx);
   const working = itemSets.filter((s) => s.kind === 'working');
   const times = sessionTimes(session, now);
@@ -120,11 +125,14 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
   useEffect(() => {
     if (!draftLoaded || form || !ex) return;
     const lastHere = [...itemSets].reverse().find((s) => s.load != null);
-    if (lastHere) { setForm(emptyForm(lastHere.load, 'serie precedente di oggi')); return; }
-    if (prev === undefined || accepted === undefined) return;
-    if (accepted && (!prev || accepted.at > prev.startedAt)) { setForm(emptyForm(accepted.load, 'proposta accettata, da confermare')); return; }
+    if (!lastHere && (prev === undefined || accepted === undefined)) return;
     const pw = prev?.sets.find((s) => s.kind === 'working' && s.load != null);
-    setForm(emptyForm(pw?.load ?? null, pw ? `seduta del ${formatDateIt(prev!.dateKey)}` : null));
+    const pf = prefillLoad({
+      lastHereLoad: lastHere?.load ?? null,
+      previous: prev ? { startedAt: prev.startedAt, dateLabel: formatDateIt(prev.dateKey), firstWorkingLoad: pw?.load ?? null } : null,
+      accepted: accepted ?? null
+    });
+    setForm(emptyForm(pf.load, pf.from));
   }, [draftLoaded, form, ex, prev, accepted, itemSets.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

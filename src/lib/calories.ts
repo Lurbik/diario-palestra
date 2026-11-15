@@ -66,7 +66,7 @@ export function dataQuality(weights: WeightEntry[], completeDiaryDays: string[],
   const reasons: string[] = [];
   if (spanDays < rules.minDays) reasons.push(`Storico del peso di ${spanDays} giorni: ne servono almeno ${rules.minDays}.`);
   if (w1 < rules.minWeighInsPerWeek || w2 < rules.minWeighInsPerWeek) reasons.push(`Pesate per settimana: ${w1} e ${w2} (servono almeno ${rules.minWeighInsPerWeek} in ciascuna).`);
-  if (complete < rules.minCompleteDiaryDays) reasons.push(`Giorni di diario dichiarati completi: ${complete}/${rules.minDays} (servono almeno ${rules.minCompleteDiaryDays}).`);
+  if (complete < rules.minCompleteDiaryDays) reasons.push(`Giorni completi con tutti i valori energetici noti: ${complete}/${rules.minDays} (servono almeno ${rules.minCompleteDiaryDays}; un valore mancante non vale zero).`);
   return { ok: reasons.length === 0, reasons, spanDays, weighInsByWeek: [w1, w2], completeDays: complete };
 }
 
@@ -111,6 +111,10 @@ export function proposeCalories(args: {
       deltaKcal: null, ratePctPerWeek: rate
     };
   }
+  // Una proposta attribuita al diario richiede un consumo calcolabile: senza, si mostrano i dati e si attende.
+  if (args.avgIntakeKcal == null) {
+    return { kind: 'insufficient_data', title: 'Consumo non calcolabile: nessuna modifica', reasons: [rateTxt, 'Mancano giorni dichiarati completi con tutti i valori energetici noti. Un valore mancante non è zero: completa le voci o le etichette e riprova.'], deltaKcal: null, ratePctPerWeek: rate };
+  }
   const [minR, maxR] = goalRange(args.goal ?? 'massa', rules);
   const uncertain = (rate < minR && rate + 2 * seRate >= minR) || (rate > maxR && rate - 2 * seRate <= maxR);
   const range = `${String(minR).replace('.', ',')}…${String(maxR).replace('.', ',')}%/settimana`;
@@ -139,6 +143,30 @@ export function goalRange(goal: 'massa' | 'mantenimento' | 'dimagrimento', rules
   if (goal === 'mantenimento') return [-0.1, 0.1];
   if (goal === 'dimagrimento') return [-0.75, -0.25];
   return [rules.rateMinPct, rules.rateMaxPct];
+}
+
+export interface IntakeStats {
+  /** Media kcal dei soli giorni dichiarati completi con TUTTE le voci note. null se nessuno. */
+  avgKcal: number | null;
+  usableDays: string[];
+  /** Giorni dichiarati completi ma con almeno una voce senza kcal (valore sconosciuto, non zero). */
+  unknownDays: string[];
+  /** Giorni dichiarati completi senza alcuna voce: esclusi, non contati come 0 kcal. */
+  emptyDays: string[];
+}
+
+/** Introito medio: registrazione incompleta, valore sconosciuto e zero restano distinti. */
+export function intakeStats(diary: { dateKey: string; nutrients: { kcal: number | null } }[], completeDays: string[], from: string, to: string): IntakeStats {
+  const usableDays: string[] = [], unknownDays: string[] = [], emptyDays: string[] = [];
+  let sum = 0;
+  for (const d of [...new Set(completeDays)].filter((x) => x >= from && x <= to).sort()) {
+    const es = diary.filter((e) => e.dateKey === d);
+    if (!es.length) { emptyDays.push(d); continue; }
+    if (es.some((e) => e.nutrients.kcal == null)) { unknownDays.push(d); continue; }
+    usableDays.push(d);
+    sum += es.reduce((a, e) => a + (e.nutrients.kcal as number), 0);
+  }
+  return { avgKcal: usableDays.length ? sum / usableDays.length : null, usableDays, unknownDays, emptyDays };
 }
 
 /** Riferimento proteico informativo 1,6–2,2 g/kg (non prescrizione). */

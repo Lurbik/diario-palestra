@@ -8,6 +8,7 @@ import { patchSettings } from '../db/bootstrap';
 import { addDays, dateKey, formatDateIt, weekStart, weekdayOf, WEEKDAYS, WEEKDAYS_SHORT } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { planMeals } from '../lib/planner';
+import { replaceProposals } from '../lib/planStore';
 import { buildIcs } from '../lib/ics';
 import { planSleep, tomorrowWake } from '../lib/sleep';
 import { syncNativeReminders } from '../lib/notify';
@@ -76,12 +77,10 @@ function CalendarScreen() {
     const kept = plan.filter((p) => p.locked || p.done || p.status === 'confirmed');
     const res = planMeals({
       slots, recipes, foods: new Map(foods.map((f) => [f.id, f])), lots, batches, rules: { excludedTags: settings.excludedTags, allergies: settings.profile.allergies },
-      kcalTarget: target?.kcal ?? null, proteinTarget: settings.proteinTargetG, locked: kept, previous: plan, today: dateKey(), feedback: (fb?.value as never) ?? {}, budgetMs: 1500
+      kcalTarget: target?.kcal ?? null, proteinTarget: settings.proteinTargetG, locked: kept, previous: plan, today: dateKey(), feedback: (fb?.value as never) ?? {}, budgetMs: 1500,
+      pantryTracked: (await db.kv.get('pantryTracking'))?.value === true
     });
-    await db.transaction('rw', db.plan, async () => {
-      await db.plan.bulkDelete(plan.filter((p) => !p.locked && !p.done && p.status !== 'confirmed').map((p) => p.id));
-      await db.plan.bulkPut(res.entries.map((e) => ({ id: uid(), dateKey: e.dateKey, slot: e.slot, recipeId: e.recipeId, foodId: null, servings: e.servings, locked: false, done: false, status: 'proposed' as const })));
-    });
+    await replaceProposals(plan, res.entries);
     setMessages([...res.messages, ...res.explain]);
     toast({ text: 'Proposte aggiornate: i pasti bloccati o confermati non sono cambiati' });
   };
