@@ -61,7 +61,7 @@ const L = [
   ['latte_scremato', 'Latte scremato', ['latte magro'], 'Milk, nonfat, fluid, with added vitamin A and vitamin D (fat free or skim)', 'as_sold', 'latticini', ['latte']],
   ['yogurt_greco_magro', 'Yogurt greco bianco magro', ['yogurt greco'], 'Yogurt, Greek, plain, nonfat (Includes foods for USDA\'s Food Distribution Program)', 'as_sold', 'latticini', ['latte']],
   ['yogurt_bianco_intero', 'Yogurt bianco intero', ['yogurt'], 'Yogurt, plain, whole milk', 'as_sold', 'latticini', ['latte']],
-  ['mozzarella', 'Mozzarella (latte intero)', ['mozzarella'], 'Cheese, mozzarella, whole milk', 'as_sold', 'latticini', ['latte', 'mozzarella']],
+  ['mozzarella', 'Mozzarella (latte intero)', ['mozzarella'], 'Cheese, mozzarella, whole milk', 'as_sold', 'latticini', ['latte', 'mozzarella', 'formaggio']],
   ['ricotta', 'Ricotta (latte intero)', ['ricotta'], 'Cheese, ricotta, whole milk', 'as_sold', 'latticini', ['latte', 'formaggio']],
   ['parmigiano', 'Parmigiano grattugiato', ['grana', 'parmigiano'], 'Cheese, parmesan, grated', 'as_sold', 'latticini', ['latte', 'formaggio']],
   ['fiocchi_latte', 'Fiocchi di latte', ['cottage cheese', 'fiocchi di latte'], 'Cheese, cottage, lowfat, 2% milkfat', 'as_sold', 'latticini', ['latte', 'formaggio']],
@@ -167,6 +167,6 @@ for (const [slug, name, syn, desc, state, category, tags, pieceMod] of L) {
   });
 }
 if (missing.length) { console.error('NON TROVATI:\n' + missing.join('\n')); }
-const meta = { catalog: 'foods', version: 2, generatedFrom: file, sourceSha256: sha, count: out.length, license: 'USDA FoodData Central: CC0 1.0 (pubblico dominio)' };
+const meta = { catalog: 'foods', version: 3, generatedFrom: file, sourceSha256: sha, count: out.length, license: 'USDA FoodData Central: CC0 1.0 (pubblico dominio)' };
 writeFileSync('src/catalog/foods.json', JSON.stringify({ meta, items: out }, null, 1));
 console.log(`Scritti ${out.length} alimenti; mancanti ${missing.length}`);

@@ -25,7 +25,7 @@ export interface MissingItem { foodId: string; qty: number; unit: string }
 export interface Candidate {
   dateKey: string; slot: MealSlot;
   recipeId: string; servings: number; kcal: number | null; protein: number | null; activeMin: number;
-  fromBatch: boolean; usesExpiring: number; label: string;
+  fromBatch: boolean; usesExpiring: number; label: string; tags: string[];
   /** Ingredienti da riservare (vuoto se porzione già pronta). */
   needs: Map<string, number>;
   /** Preparazione indivisibile: si prepara l'intero lotto. */
@@ -42,6 +42,8 @@ export interface PlannerInput {
   pantryTracked?: boolean;
   /** 'pantry_only' = solo ciò che si può preparare con le scorte; 'can_buy' = ammette acquisti, elencando il mancante. */
   stockMode?: 'pantry_only' | 'can_buy';
+  /** Preferenze configurabili (non vincoli): pesano nella graduatoria. */
+  prefs?: { saltyBreakfast?: boolean | null };
 }
 
 export interface PlannedEntry {
@@ -101,7 +103,7 @@ export function candidatesFor(s: SlotNeed, inp: PlannerInput, batchLeft?: Map<st
       const whole = !fromBatch && isIndivisible(r);
       cands.push({
         dateKey: s.dateKey, slot: s.slot, recipeId: r.id, servings, kcal: t.kcal, protein: t.protein, activeMin: active, fromBatch,
-        usesExpiring: fromBatch ? 0 : r.ingredients.filter((i) => expiringFoods.has(i.foodId)).length, label: r.name,
+        usesExpiring: fromBatch ? 0 : r.ingredients.filter((i) => expiringFoods.has(i.foodId)).length, label: r.name, tags: r.tags ?? [],
         needs: fromBatch ? new Map() : ingredientNeeds(r, servings), prepareWhole: whole, leftover: whole ? Math.max(0, r.servings - servings) : 0
       });
     }
@@ -129,6 +131,8 @@ function jScore(p: Partial, inp: PlannerInput, w: PlannerWeights, frac: number, 
     if (fb?.liked) J -= w.preference * 0.2;
     if (fb?.tooSlow) J += w.preference * 0.2;
     if (fb?.tooBig && c.servings > 1) J += w.preference * 0.3;
+    if (fb?.tooDry) J += w.preference * 0.3;
+    if (inp.prefs?.saltyBreakfast && c.slot === 'colazione' && c.tags.includes('dolce')) J += w.preference * 0.8;
     J += w.repetition * 0.3 * (used.get(c.recipeId) ?? 0);
     if (c.fromBatch) J -= w.waste * 0.3;            // usare porzioni pronte riduce lo spreco
     J -= w.waste * 0.3 * c.usesExpiring;             // usare ingredienti utilizzabili in scadenza
@@ -187,7 +191,7 @@ export function planMeals(inp: PlannerInput): PlannerResult {
       const { cands, reasons } = candidatesFor(s, inp, new Map([...batchLeft.entries()].map(([k, v]) => [k, v + 0])));
       // Le porzioni create nello stesso giorno da un lotto indivisibile contano come pronte per gli slot successivi:
       const extraFromVirtual = (p: Partial) => inp.recipes.filter((r) => (p.virtualBatch.get(r.id) ?? 0) > 0 && r.mealSlots.includes(s.slot) && !cands.some((c) => c.recipeId === r.id && c.fromBatch))
-        .map((r): Candidate => { const t = strictTotals(recipeTotals(r, inp.foods, 1 / r.servings).sum); return { dateKey: s.dateKey, slot: s.slot, recipeId: r.id, servings: 1, kcal: t.kcal, protein: t.protein, activeMin: 2, fromBatch: true, usesExpiring: 0, label: r.name, needs: new Map(), prepareWhole: false, leftover: 0 }; });
+        .map((r): Candidate => { const t = strictTotals(recipeTotals(r, inp.foods, 1 / r.servings).sum); return { dateKey: s.dateKey, slot: s.slot, recipeId: r.id, servings: 1, kcal: t.kcal, protein: t.protein, activeMin: 2, fromBatch: true, usesExpiring: 0, label: r.name, tags: r.tags ?? [], needs: new Map(), prepareWhole: false, leftover: 0 }; });
       const next: Partial[] = [];
       let blockedByStock = false;
       for (const p of frontier) {

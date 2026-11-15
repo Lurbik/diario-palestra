@@ -24,6 +24,7 @@ export const SOURCES: Source[] = [
   { area: 'Nutrizione', title: 'Open Food Facts — documentazione', url: 'https://openfoodfacts.github.io/documentation/docs/', note: 'Integrazione facoltativa per codice a barre.' },
   { area: 'Nutrizione', title: 'Open Food Facts — licenza', url: 'https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/license-be-on-the-legal-side/', note: 'Dati ODbL: attribuzione e verifica.' },
   { area: 'Sicurezza alimentare', title: 'FSA — guida studenti a igiene e conservazione', url: 'https://www.gov.uk/government/publications/student-guide-to-food-safety-and-hygiene/student-guide-to-food-safety-and-hygiene', note: 'Preparazione, avanzi, frigo.' },
+  { area: 'Sicurezza alimentare', title: 'USDA FSIS — Shelf-Stable Food Safety', url: 'https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/shelf-stable-food', note: 'Cosa si conserva fuori frigo; non tutte le conserve sono stabili ("Keep Refrigerated").' },
   { area: 'Sicurezza alimentare', title: 'USDA FSIS — pranzo al sacco sicuro', url: 'https://ask.fsis.usda.gov/article/How-do-you-keep-a-bag-lunch-safe', note: 'Trasporto con fonti refrigeranti.' },
   { area: 'Sonno', title: 'AASM/SRS — durata del sonno negli adulti', url: 'https://aasm.org/resources/pdf/adultsleepdurationconsensus.pdf', note: 'Riferimento generale di almeno 7 ore.' },
   { area: 'Tecnica', title: 'web.dev — aggiornamenti PWA', url: 'https://web.dev/learn/pwa/update', note: 'Ciclo di aggiornamento del service worker.' },

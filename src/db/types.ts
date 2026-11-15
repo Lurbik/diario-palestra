@@ -273,6 +273,11 @@ export interface Recipe extends CatalogMeta {
   /** Moltiplicatori di porzione ammessi (porzioni realistiche), es. [0.75, 1, 1.25, 1.5] */
   portionSteps?: number[];
   tags?: string[];
+  /** Fuori frigorifero: distinto da "trasportabile". ok = secondo la fonte indicata; requires_cold = serve freddo; not_verified = nessuna fonte. */
+  ambient?: 'ok' | 'requires_cold' | 'not_verified';
+  ambientSource?: string;
+  /** Unità delle porzioni di un lotto (es. barrette in pezzi). */
+  unitLabel?: 'porzioni' | 'pezzi';
 }
 
 export type MealSlot = 'colazione' | 'spuntino_mattina' | 'pranzo' | 'merenda' | 'cena' | 'spuntino_sera';
@@ -304,6 +309,8 @@ export interface PreparedBatch {
   location: 'frigo' | 'freezer' | 'dispensa';
   note: string;
   txId: ID;
+  /** Come si contano le unità del lotto (es. barrette: pezzi). */
+  unitLabel?: 'porzioni' | 'pezzi';
 }
 
 export interface StockMove { table: 'stock' | 'batches'; id: ID; field: 'qty' | 'servingsLeft'; delta: number; created?: boolean }

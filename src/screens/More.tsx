@@ -9,6 +9,7 @@ import { addDays, dateKey, formatDateIt, weekStart, weekdayOf, WEEKDAYS, WEEKDAY
 import { fmtNum, uid } from '../lib/id';
 import { planMeals } from '../lib/planner';
 import { replaceProposals } from '../lib/planStore';
+import { rulesFrom } from '../lib/recipes';
 import { buildIcs } from '../lib/ics';
 import { planSleep, tomorrowWake } from '../lib/sleep';
 import { syncNativeReminders } from '../lib/notify';
@@ -76,9 +77,9 @@ function CalendarScreen() {
     const [lots, batches, fb] = await Promise.all([db.stock.toArray(), db.batches.toArray(), db.kv.get('recipeFeedback')]);
     const kept = plan.filter((p) => p.locked || p.done || p.status === 'confirmed');
     const res = planMeals({
-      slots, recipes, foods: new Map(foods.map((f) => [f.id, f])), lots, batches, rules: { excludedTags: settings.excludedTags, allergies: settings.profile.allergies },
+      slots, recipes, foods: new Map(foods.map((f) => [f.id, f])), lots, batches, rules: rulesFrom(settings),
       kcalTarget: target?.kcal ?? null, proteinTarget: settings.proteinTargetG, locked: kept, previous: plan, today: dateKey(), feedback: (fb?.value as never) ?? {}, budgetMs: 1500,
-      pantryTracked: (await db.kv.get('pantryTracking'))?.value === true
+      pantryTracked: (await db.kv.get('pantryTracking'))?.value === true, prefs: { saltyBreakfast: settings.profile.saltyBreakfast }
     });
     await replaceProposals(plan, res.entries);
     setMessages([...res.messages, ...res.explain]);
@@ -248,6 +249,22 @@ function SettingsScreen() {
           <div className="chips">{['formaggio', 'latte', 'glutine', 'uova', 'pesce', 'crostacei', 'affettato', 'arachidi', 'frutta_a_guscio', 'soia', 'legumi'].map((t) => <Chip key={t} on={s.excludedTags.includes(t)} onClick={() => set({ excludedTags: s.excludedTags.includes(t) ? s.excludedTags.filter((x) => x !== t) : [...s.excludedTags, t] })}>{t}</Chip>)}</div>
           
         </div>
+        <ExceptionsPicker />
+        <div className="mt"><strong className="small">Colazione</strong>
+          <div className="chips">
+            <Chip on={s.profile.saltyBreakfast === true} onClick={() => set({ profile: { ...s.profile, saltyBreakfast: s.profile.saltyBreakfast === true ? null : true } })}>Preferisco salata</Chip>
+            <Chip on={s.profile.saltyBreakfast === false} onClick={() => set({ profile: { ...s.profile, saltyBreakfast: s.profile.saltyBreakfast === false ? null : false } })}>Indifferente</Chip>
+          </div>
+          <p className="small muted">È una preferenza: le colazioni dolci restano possibili, compaiono solo più in basso.</p>
+        </div>
+        <div className="mt"><strong className="small">Quando sei fuori casa (lavoro, studio)</strong>
+          <div className="chips">
+            <Chip on={s.profile.fridgeAway === 'si'} onClick={() => set({ profile: { ...s.profile, fridgeAway: s.profile.fridgeAway === 'si' ? null : 'si' } })}>Ho un frigo</Chip>
+            <Chip on={s.profile.fridgeAway === 'no'} onClick={() => set({ profile: { ...s.profile, fridgeAway: s.profile.fridgeAway === 'no' ? null : 'no' } })}>Niente frigo</Chip>
+            <Chip on={s.profile.coolerBag === 'si'} onClick={() => set({ profile: { ...s.profile, coolerBag: s.profile.coolerBag === 'si' ? null : 'si' } })}>Uso la borsa termica</Chip>
+            <Chip on={s.profile.coolerBag === 'no'} onClick={() => set({ profile: { ...s.profile, coolerBag: s.profile.coolerBag === 'no' ? null : 'no' } })}>Senza borsa termica</Chip>
+          </div>
+        </div>
         <NumInput label="Target proteico (g/die)" value={s.proteinTargetG} onChange={(v) => set({ proteinTargetG: v })} decimals={false} />
       </section>
       <section className="card">
@@ -400,5 +417,27 @@ function SleepPlanner() {
       ) : <p className="muted mt">Inserisci una sveglia per calcolare gli orari.</p>}
       <p className="small muted">Pianificazione organizzativa, non una previsione dell'addormentamento. Riferimento generale per adulti: almeno 7 ore (AASM/SRS); la durata la scegli tu. Nessun ciclo fisso da 90 minuti.</p>
     </section>
+  );
+}
+
+/** Eccezioni alle esclusioni per preferenza: es. "niente formaggi, ma la mozzarella sì". Le allergie non hanno eccezioni. */
+function ExceptionsPicker() {
+  const s = useSettings();
+  const foods = useLiveQuery(() => db.foods.toArray(), []) ?? [];
+  const candidates = foods.filter((f) => !f.archived && f.tags.some((t) => s.excludedTags.includes(t))).sort((a, b) => a.name.localeCompare(b.name));
+  if (!candidates.length) return null;
+  const allowed = new Set(s.allowedFoodIds);
+  return (
+    <details className="mt">
+      <summary>Eccezioni alle esclusioni ({allowed.size})</summary>
+      <p className="small muted">Tocca un alimento per consentirlo anche se rientra in un'etichetta esclusa. Non vale per le allergie.</p>
+      <div className="chips">
+        {candidates.map((f) => (
+          <Chip key={f.id} on={allowed.has(f.id)} onClick={() => patchSettings({ allowedFoodIds: allowed.has(f.id) ? s.allowedFoodIds.filter((x) => x !== f.id) : [...s.allowedFoodIds, f.id] })}>
+            {allowed.has(f.id) ? '✓ ' : ''}{f.name}
+          </Chip>
+        ))}
+      </div>
+    </details>
   );
 }

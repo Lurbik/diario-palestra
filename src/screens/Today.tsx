@@ -9,7 +9,7 @@ import { fmtNum, uid } from '../lib/id';
 import { estimateItemMin, sessionTimes } from '../lib/workout';
 import { planMeals } from '../lib/planner';
 import { eatBatchPortion, eatRecipeDirect, ShortfallError } from '../lib/inventory';
-import { shoppingNeeds } from '../lib/recipes';
+import { shoppingNeeds, rulesFrom } from '../lib/recipes';
 import { planSleep, sleepConflicts, tomorrowWake } from '../lib/sleep';
 import { sumNutrients } from '../lib/nutrition';
 import { OnboardingSheet } from './Onboarding';
@@ -56,7 +56,7 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
   const confirmed = nextSlot ? plan.find((p) => p.dateKey === today && p.slot === nextSlot && p.status === 'confirmed' && !p.done) : undefined;
   const proposals = useMemo(() => {
     if (!nextSlot || !recipes.length) return [] as { recipe: Recipe; servings: number; fromBatch: boolean; label: string }[];
-    const rules = { excludedTags: settings.excludedTags, allergies: settings.profile.allergies };
+    const rules = rulesFrom(settings);
     const atWork = nextSlot === 'spuntino_mattina' || (nextSlot === 'pranzo' && dayType === 'universita');
     const remainingKcal = target?.kcal != null && consumed.values.kcal != null ? Math.max(0, target.kcal - consumed.values.kcal) : null;
     const remainingSlots = windows.filter((w) => !logged.has(w.slot) && w.to >= hm).length || 1;
@@ -70,7 +70,7 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
         slots: [{ dateKey: today, slot: nextSlot, maxActiveMin: k === 1 ? Math.min(cookToday ?? 15, 10) : cookToday, mustBePortable: atWork, coldChainOk: settings.profile.coolerBag === 'si' || settings.profile.fridgeAway === 'si' }],
         recipes: pool, foods: fMap, lots, batches, rules, pantryTracked: !!kvv('pantryTracking'),
         // "con quello che hai": fattibilità calcolata per PORZIONE (o lotto intero se indivisibile)
-        stockMode: k === 2 ? 'pantry_only' : 'can_buy',
+        stockMode: k === 2 ? 'pantry_only' : 'can_buy', prefs: { saltyBreakfast: settings.profile.saltyBreakfast },
         kcalTarget: remainingKcal != null ? remainingKcal / remainingSlots : null, proteinTarget: settings.proteinTargetG ? settings.proteinTargetG / Math.max(3, windows.length) : null,
         locked: [], previous: [], today, feedback: (kvv('recipeFeedback') as Record<string, never>) ?? {}, beamWidth: 6
       });

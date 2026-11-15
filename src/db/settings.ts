@@ -28,6 +28,7 @@ export interface Profile {
   fridgeAway: Answer;              // frigo disponibile fuori casa (lavoro/studio)?
   coolerBag: Answer;               // borsa termica con elementi refrigeranti?
   defaultCookMin: number | null;   // tempo attivo abituale in cucina (min), salvato una volta
+  saltyBreakfast?: boolean | null; // preferenza: colazione salata
   // Dati usati SOLO se si sceglie la stima da formula
   age: number | null;
   heightCm: number | null;
@@ -60,6 +61,8 @@ export interface Settings {
   quietFrom: string;
   quietTo: string;
   excludedTags: string[];
+  /** Eccezioni alle esclusioni per preferenza (ID alimento). */
+  allowedFoodIds: string[];
   proteinTargetG: number | null;
   observationStart: string | null;
   policy: PolicySettings;
@@ -83,7 +86,7 @@ const W = (slot: MealSlot, from: string, to: string, enabled = true): MealWindow
 export function emptyProfile(): Profile {
   return {
     name: '', goal: null, experience: null, trainingDaysPerWeek: null, sessionMinutes: null, equipment: null, allergies: [],
-    fridgeAway: null, coolerBag: null, defaultCookMin: null, age: null, heightCm: null, sex: null
+    fridgeAway: null, coolerBag: null, defaultCookMin: null, saltyBreakfast: null, age: null, heightCm: null, sex: null
   };
 }
 
@@ -101,6 +104,7 @@ export function defaultSettings(): Settings {
     quietFrom: '23:00',
     quietTo: '07:00',
     excludedTags: [],
+    allowedFoodIds: [],
     proteinTargetG: null,
     observationStart: null,
     policy: DEFAULT_POLICY,

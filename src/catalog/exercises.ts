@@ -5,7 +5,7 @@ import type { EquipmentKind, Exercise, LoadConvention, MovementPattern, Muscle }
 import { EQ_LABEL } from '../ui/labels';
 export { EQ_LABEL };
 
-export const EXERCISE_CATALOG_VERSION = 2;
+export const EXERCISE_CATALOG_VERSION = 3;
 
 type Cls = Exercise['policyClass'];
 const X = (
@@ -307,5 +307,22 @@ export const EXERCISE_CATALOG: Exercise[] = [
   X('pallof', 'Pallof press', ['antirotazione al cavo'], 'stabilizzazione', 'cavo', ['addome'], [], 'cable_stack', 'calves_abs', 1, true,
     'Di lato al cavo all\'altezza del petto, maniglia al petto.',
     ['Spingi la maniglia in avanti senza ruotare il busto.', 'Tieni un istante.', 'Riporta al petto.'],
-    ['Ruotare.', 'Carico eccessivo.'])
+    ['Ruotare.', 'Carico eccessivo.']),
+  // ---- Varianti aggiunte (catalogo v3)
+  X('panca_incl_mp', 'Panca inclinata al multipower', ['incline smith press'], 'spinta_orizzontale', 'multipower', ['petto'], ['deltoidi_anteriori', 'tricipiti'], 'plates_per_side', 'compound', 2, false,
+    'Panca a 30° sotto la barra: la barra scende sulla parte alta del petto.',
+    ['Sblocca la barra con le braccia tese.', 'Scendi controllando fino a sfiorare la parte alta del petto o al punto concordato.', 'Spingi verso l\'alto senza staccare i glutei.', 'Registra i dischi per lato; il peso della barra si annota a parte.'],
+    ['Panca in posizione diversa tra le sedute (dati non confrontabili).', 'Sommare un peso barra non verificato.']),
+  X('jm_press_mp', 'JM press al multipower', ['JM press'], 'tricipiti', 'multipower', ['tricipiti'], ['petto'], 'plates_per_side', 'compound', 3, false,
+    'Panca piana sotto la barra, presa alla larghezza delle spalle o poco più stretta.',
+    ['Parti a braccia tese sopra il petto.', 'Scendi piegando i gomiti e portando la barra verso la parte alta del petto/mento, gomiti in avanti.', 'Estendi i gomiti tornando su.', 'Usa un carico che controlli: è un movimento tecnico.'],
+    ['Trasformarlo in una panca stretta con i gomiti aperti.', 'Discesa senza controllo verso il viso.']),
+  X('alzate_lat_panca', 'Alzata laterale su panca inclinata', ['alzata laterale sdraiato di lato', 'lateral raise su panca'], 'alzate_laterali', 'manubri', ['deltoidi_laterali'], [], 'per_dumbbell', 'isolation', 2, true,
+    'Sdraiato di fianco su una panca inclinata (circa 30–45°), manubrio nella mano del braccio in alto.',
+    ['Parti con il braccio davanti al corpo, gomito leggermente piegato.', 'Solleva il manubrio verso l\'alto e di lato fino circa alla verticale o al punto concordato.', 'Scendi lentamente.', 'Completa un lato, poi l\'altro: le ripetizioni sono per lato.'],
+    ['Ruotare il busto per aiutarsi.', 'Contare insieme i due lati.']),
+  X('crunch_allungamento', 'Crunch in allungamento su panca declinata', ['crunch con carico a braccia tese'], 'addome', 'corpo_libero', ['addome'], [], 'bodyweight_added', 'calves_abs', 2, false,
+    'Su panca declinata con piedi bloccati, schiena che parte in leggera estensione; carico facoltativo tenuto a braccia tese.',
+    ['Parti dalla posizione allungata con la schiena appoggiata.', 'Arrotola il busto portando le costole verso il bacino.', 'Torna lentamente alla posizione allungata.', 'Registra il carico come zavorra (kg tenuti in mano).'],
+    ['Tirare con le anche invece di arrotolare il busto.', 'Usare lo slancio delle braccia.'])
 ];

@@ -1,7 +1,7 @@
 {
  "meta": {
   "catalog": "foods",
-  "version": 2,
+  "version": 3,
   "generatedFrom": "FoodData_Central_sr_legacy_food_json_2021-10-28.json",
   "sourceSha256": "be43d76f9812fef6eb2d5a6ec2a37ec5f0fb5afd0168cfcc2271b0c3640c8e78",
   "count": 112,
@@ -1283,7 +1283,8 @@
    "category": "latticini",
    "tags": [
     "latte",
-    "mozzarella"
+    "mozzarella",
+    "formaggio"
    ],
    "allergenInfo": "unknown"
   },

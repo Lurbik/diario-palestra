@@ -5,7 +5,7 @@ import type { MealSlot, Recipe } from '../db/types';
 import { Check, Chip, Field, Icon, NumInput, Sheet, go, useSettings, useToast } from '../ui/kit';
 import { MEAL_LABEL, MEAL_ORDER } from '../db/settings';
 import { recipeTotals, strictTotals, barTotals, NUTRIENT_KEYS, NUTRIENT_LABEL, NUTRIENT_UNIT } from '../lib/nutrition';
-import { suggestRecipes, exclusionReason, type RecipeFilter, type RecipeFeedback } from '../lib/recipes';
+import { suggestRecipes, exclusionReason, rulesFrom, type RecipeFilter, type RecipeFeedback } from '../lib/recipes';
 import { CategoryIcon } from '../ui/visuals';
 import type { Food } from '../db/types';
 import { kvSet } from '../db/db';
@@ -14,6 +14,7 @@ import { addDays, dateKey } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { NutrientLine } from './Food';
 import { STATE_LABEL } from './FoodEditor';
+import { WorkSnack, AmbientInfo } from './WorkSnack';
 
 const DEFAULT_FILTER: RecipeFilter = { availability: 'any', maxMissing: 2, maxActiveMin: null, portable: false, eatCold: false, noColdChain: false, expiringFirst: false };
 
@@ -29,12 +30,13 @@ export function RecipesTab() {
   const fbRow = useLiveQuery(() => db.kv.get('recipeFeedback'), []);
   const [editor, setEditor] = useState<Recipe | null>(null);
   const fMap = new Map(foods.map((x) => [x.id, x]));
-  const list = suggestRecipes({ recipes, foods: fMap, lots, filter: f, pantryTracked: tracked, feedback: (fbRow?.value as Record<string, RecipeFeedback>) ?? {}, rules: { excludedTags: settings.excludedTags, allergies: settings.profile.allergies }, recentDiary: recent, today });
+  const list = suggestRecipes({ recipes, foods: fMap, lots, filter: f, pantryTracked: tracked, feedback: (fbRow?.value as Record<string, RecipeFeedback>) ?? {}, rules: rulesFrom(settings), recentDiary: recent, today });
   const shown = list.filter((s) => !s.excluded);
   const hidden = list.filter((s) => s.excluded);
   const up = (p: Partial<RecipeFilter>) => setF({ ...f, ...p });
   return (
     <>
+      <WorkSnack />
       <details className="card flat">
         <summary>Filtri {JSON.stringify(f) !== JSON.stringify(DEFAULT_FILTER) ? <span className="badge accent">attivi</span> : null}</summary>
         <div className="col">
@@ -63,7 +65,7 @@ export function RecipesTab() {
         return (
           <a className="card" key={r.id} href={`#/cibo/ricetta/${r.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
             <div className="row"><span className="thumb"><CategoryIcon cat={r.category} /></span><div className="grow"><strong>{r.favorite ? '★ ' : ''}{r.name}</strong>{r.origin === 'legacy_seed' && <span className="badge"> versione precedente</span>}<br /><span className="small muted">{r.difficulty ?? ''}{r.eating?.oneHand ? ' · si mangia con una mano' : ''}</span></div></div>
-            <div className="small muted">{r.activeMin != null ? `${r.activeMin} min attivi` : 'tempo n.d.'}{r.totalMin != null ? ` · ${r.totalMin} totali` : ''} · {r.servings} porz.{r.portable ? ' · trasportabile' : ''}{r.needsColdChain ? ' · richiede freddo' : ''}</div>
+            <div className="small muted">{r.activeMin != null ? `${r.activeMin} min attivi` : 'tempo n.d.'}{r.totalMin != null ? ` · ${r.totalMin} totali` : ''} · {r.servings} {r.unitLabel === 'pezzi' ? 'pezzi' : 'porz.'}{r.portable ? ' · trasportabile' : ''}{r.ambient === 'ok' ? ' · fuori frigo: ok' : r.ambient === 'requires_cold' || r.needsColdChain ? ' · richiede freddo' : ''}</div>
             <NutrientLine n={n} /> <span className="small muted">a porzione</span>
             <div className="chips mt">
               {missing.length > 0 && <span className="badge">{missing.length} ingredienti mancanti</span>}
@@ -90,7 +92,7 @@ export function RecipeDetail({ id }: { id: string }) {
   if (!r) return <main className="main"><p className="muted">Caricamento…</p></main>;
   const tot = recipeTotals(r, fMap);
   const per = strictTotals(recipeTotals(r, fMap, 1 / r.servings).sum);
-  const excl = exclusionReason(r, fMap, { excludedTags: settings.excludedTags, allergies: settings.profile.allergies });
+  const excl = exclusionReason(r, fMap, rulesFrom(settings));
   return (
     <main className="main">
       <a href="#/cibo/ricette" className="small">‹ Ricette</a>
@@ -101,7 +103,7 @@ export function RecipeDetail({ id }: { id: string }) {
       {excl && <div className="banner warn small">Esclusa dai suggerimenti: {excl}</div>}
       <div className="card">
         <div className="grid2">
-          <div><div className="small muted">A porzione ({r.servings} porz.)</div><NutrientLine n={per} /></div>
+          <div><div className="small muted">{r.unitLabel === 'pezzi' ? `A pezzo (${r.servings} pezzi)` : `A porzione (${r.servings} porz.)`}</div><NutrientLine n={per} /></div>
           <div><div className="small muted">Tempo</div><div className="small">{r.activeMin ?? '?'} min attivi · {r.totalMin ?? '?'} totali</div></div>
         </div>
         <p className="small muted">{NUTRIENT_KEYS.map((k) => `${NUTRIENT_LABEL[k]} lotto: ${tot.sum.values[k] == null ? 'mancante' : fmtNum(tot.sum.values[k], 0) + (tot.sum.incomplete[k] ? '+?' : '') + ' ' + NUTRIENT_UNIT[k]}`).join(' · ')}</p>
@@ -109,10 +111,11 @@ export function RecipeDetail({ id }: { id: string }) {
       </div>
       <h2>Ingredienti</h2>
       <ul className="list card flat">
-        {r.ingredients.map((i, k) => { const f = fMap.get(i.foodId); return <li key={k} className="row between small"><span>{f?.name ?? i.foodId}{f ? <span className="muted"> · {STATE_LABEL[f.state]}</span> : null}</span><span className="num">{fmtNum(i.qty, 1)} {i.unit}</span></li>; })}
+        {r.ingredients.map((i, k) => { const f = fMap.get(i.foodId); return <li key={k} className="row between small"><span>{f?.name ?? i.foodId}{f ? <span className="muted"> · peso {STATE_LABEL[f.state].toLowerCase()} · valori: {f.source === 'label' ? 'etichetta' : f.source === 'database' ? (f.sourceNote.match(/fdcId \d+/) ? 'USDA ' + f.sourceNote.match(/fdcId \d+/)![0] : 'banca dati') : 'stima'}</span> : null}</span><span className="num">{fmtNum(i.qty, 1)} {i.unit}</span></li>; })}
       </ul>
       {r.steps.length > 0 && <><h2>Passaggi</h2><ol>{r.steps.map((s, k) => <li key={k}>{s}</li>)}</ol></>}
-      <p className="small">{r.equipment.length ? `Attrezzatura: ${r.equipment.join(', ')}. ` : ''}{r.portable ? 'Trasportabile. ' : ''}{r.eatCold ? 'Si può mangiare fredda. ' : ''}</p>
+      <p className="small">{r.equipment.length ? `Attrezzatura: ${r.equipment.join(', ')}. ` : ''}{r.eatCold ? 'Si può mangiare fredda. ' : ''}</p>
+      <AmbientInfo r={r} />
       {r.storage && <div className="card flat small"><strong>Conservazione</strong><p>{r.storage}</p>{r.storageSource && <p className="muted">Fonte: {r.storageSource}. Se manca una regola verificata per un alimento, l'app non garantisce una scadenza.</p>}</div>}
       {r.notes && <p className="small muted">{r.notes}</p>}
       <div className="col mt">
@@ -277,7 +280,7 @@ export function BarsCalculator() {
       id: BAR_ID, name: 'Barrette casalinghe', ingredients, servings: pieces ?? 1, steps: ['Mescola gli ingredienti, compatta in teglia, raffredda e taglia.'], equipment: [],
       activeMin: null, totalMin: null, portable: true, eatCold: true, needsColdChain: true,
       storage: 'Barretta casalinga umida (contiene acqua): non è un prodotto industriale stabile a temperatura ambiente. Conservala in frigo o in freezer; l\'app non stabilisce una durata certa.',
-      storageSource: 'Principi generali FSA/USDA (vedi Fonti)', mealSlots: ['spuntino_mattina', 'merenda'], notes: 'Le tue quantità reali. Proteine: inserisci i valori dall\'etichetta, altrimenti risultano mancanti.', seed: false, favorite: true
+      storageSource: 'Principi generali FSA/USDA (vedi Fonti)', ambient: 'requires_cold', ambientSource: 'USDA FSIS, Shelf-Stable Food Safety (vedi Fonti)', unitLabel: 'pezzi', category: 'multiporzione', tags: ['dolce'], mealSlots: ['spuntino_mattina', 'merenda'], notes: 'Le tue quantità reali. Proteine: inserisci i valori dall\'etichetta, altrimenti risultano mancanti.', seed: false, favorite: true
     };
     await db.recipes.put(rec);
     toast({ text: 'Barrette salvate come ricetta ✓' });

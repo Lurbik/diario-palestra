@@ -10,6 +10,7 @@ import { uid } from '../lib/id';
 import { setUnsaved } from '../lib/pwa';
 import { SessionTools } from './SessionTools';
 import { CompareEntry, type CompareField } from './SessionCompare';
+import { MachineButton } from './MachinePicker';
 import { prefillLoad } from '../lib/loadDecision';
 
 export interface FormState {
@@ -103,7 +104,8 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
   const [sheet, setSheet] = useState<null | 'list' | 'finish' | 'add' | { edit: SetEntry }>(null);
 
   // --- Bozza del modulo, persistita in IndexedDB e ripristinata dopo chiusura/blocco schermo ---
-  const draftKey = `draft:${session.id}:${idx}`;
+  // La bozza è legata anche alla macchina/configurazione: cambiando macchina si riparte dallo storico di quella.
+  const draftKey = `draft:${session.id}:${idx}:${ck}`;
   // Lo stato del modulo è legato alla chiave della bozza: cambiando esercizio non si "trascina" il modulo precedente.
   const [fs, setFs] = useState<{ key: string; form: FormState | null; loaded: boolean }>({ key: '', form: null, loaded: false });
   const form = fs.key === draftKey ? fs.form : null;
@@ -127,7 +129,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
   // Prefill del carico (solo carico, con indicazione) quando non c'è bozza.
   useEffect(() => {
     if (!draftLoaded || form || !ex) return;
-    const lastHere = [...itemSets].reverse().find((s) => s.load != null);
+    const lastHere = [...itemSets].reverse().find((s) => s.load != null && s.configKey === ck);
     if (!lastHere && (prev === undefined || accepted === undefined)) return;
     const pw = prev?.sets.find((s) => s.kind === 'working' && s.load != null);
     const pf = prefillLoad({
@@ -254,9 +256,10 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
             </div>
             <h1 style={{ marginBottom: 4 }}>{ex.name}</h1>
             <p className="small muted" style={{ marginTop: 0 }}>
-              {ex.aliases.length ? `“${ex.aliases.join('”, “')}” · ` : ''}{machine?.name ?? ex.equipment}{ex.variant ? ` · ${ex.variant}` : ''}
+              {ex.aliases.length ? `“${ex.aliases.join('”, “')}” · ` : ''}{ex.equipment}{ex.variant ? ` · ${ex.variant}` : ''}
               {item.skipped && <span className="badge warn"> saltato</span>}
             </p>
+            {(ex.equipmentKind === undefined || ex.equipmentKind === 'macchina' || ex.equipmentKind === 'multipower' || ex.equipmentKind === 'cavo' || ex.machineId) && <MachineButton ex={ex} />}
             {ex.toConfirm.length > 0 && <p className="small"><span className="badge warn">Da confermare</span> {ex.toConfirm[0]}{ex.toConfirm.length > 1 ? ` (+${ex.toConfirm.length - 1})` : ''}</p>}
             <SessionTools session={session} ex={ex} idx={idx} exercises={exercises} />
 

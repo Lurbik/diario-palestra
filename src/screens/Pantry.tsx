@@ -146,16 +146,17 @@ function Prepared() {
   const [meal, setMeal] = useState<MealSlot>('pranzo');
   const [serv, setServ] = useState<number | null>(1);
   const active = batches.filter((b) => b.servingsLeft > 0);
+  const eatPieces = batches.find((b) => b.id === eat)?.unitLabel === 'pezzi';
   return (
     <>
       {!active.length && <p className="empty">Nessun piatto preparato disponibile.</p>}
       {active.map((b) => (
         <div className="card" key={b.id}>
           <div className="row between"><strong>{b.name}</strong><span className="badge">{LOC[b.location]}</span></div>
-          <p className="small muted">{fmtNum(b.servingsLeft, 1)} di {b.servingsTotal} porzioni · preparato {formatDateIt(b.dateKey)}{b.finalWeightG ? ` · lotto ${fmtNum(b.finalWeightG, 0)} g` : ''}</p>
-          <NutrientLine n={batchPortion(b, 1)} /> <span className="small muted">a porzione</span>
+          <p className="small muted">{fmtNum(b.servingsLeft, 1)} di {b.servingsTotal} {b.unitLabel ?? 'porzioni'} · preparato {formatDateIt(b.dateKey)}{b.finalWeightG ? ` · lotto ${fmtNum(b.finalWeightG, 0)} g` : ''}</p>
+          <NutrientLine n={batchPortion(b, 1)} /> <span className="small muted">{b.unitLabel === 'pezzi' ? 'a pezzo' : 'a porzione'}</span>
           <div className="row wrap mt">
-            <button className="btn sm primary" onClick={() => setEat(b.id)}>Mangia porzione</button>
+            <button className="btn sm primary" onClick={() => setEat(b.id)}>{b.unitLabel === 'pezzi' ? 'Mangia un pezzo' : 'Mangia porzione'}</button>
             {b.location !== 'freezer' && <button className="btn sm" onClick={() => db.batches.update(b.id, { location: 'freezer' })}>Sposta in freezer</button>}
             {b.location === 'freezer' && <button className="btn sm" onClick={() => db.batches.update(b.id, { location: 'frigo' })}>Scongela in frigo</button>}
             <button className="btn sm" onClick={async () => {
@@ -169,10 +170,10 @@ function Prepared() {
         </div>
       ))}
       {eat && (
-        <Sheet title="Mangia porzione" onClose={() => setEat(null)}>
+        <Sheet title={eatPieces ? 'Mangia un pezzo' : 'Mangia porzione'} onClose={() => setEat(null)}>
           <div className="col">
             <Field label="Pasto"><select value={meal} onChange={(e) => setMeal(e.target.value as MealSlot)}>{MEAL_ORDER.map((m) => <option key={m} value={m}>{MEAL_LABEL[m]}</option>)}</select></Field>
-            <NumInput label="Porzioni" value={serv} onChange={setServ} />
+            <NumInput label={eatPieces ? 'Pezzi' : 'Porzioni'} value={serv} onChange={setServ} />
             <button className="btn primary block" disabled={!serv} onClick={async () => {
               try { await eatBatchPortion({ batchId: eat, servings: serv!, meal }); toast({ text: 'Registrata nel diario ✓' }); setEat(null); }
               catch (e) { toast({ text: String(e instanceof Error ? e.message : e), kind: 'error' }); }

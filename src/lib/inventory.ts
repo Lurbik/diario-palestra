@@ -81,7 +81,7 @@ export async function prepareBatch(opts: {
     const batch: PreparedBatch = {
       id: uid(), recipeId: recipe.id, name: recipe.name, preparedAt: at, dateKey: todayKey(at),
       servingsTotal: opts.servingsMade, servingsLeft: opts.servingsMade, finalWeightG: opts.finalWeightG,
-      totals, location: opts.location ?? 'frigo', note: opts.note ?? '', txId
+      totals, location: opts.location ?? 'frigo', note: opts.note ?? '', txId, unitLabel: recipe.unitLabel ?? 'porzioni'
     };
     await db.batches.add(batch);
     moves.push({ table: 'batches', id: batch.id, field: 'servingsLeft', delta: opts.servingsMade, created: true });
@@ -96,7 +96,7 @@ export async function eatBatchPortion(opts: { batchId: string; servings: number;
   return db.transaction('rw', TABLES(), async () => {
     const b = await db.batches.get(opts.batchId);
     if (!b) throw new Error('Lotto non trovato');
-    if (b.servingsLeft + EPS < opts.servings) throw new Error(`Restano solo ${b.servingsLeft} porzioni di "${b.name}"`);
+    if (b.servingsLeft + EPS < opts.servings) throw new Error(`Restano solo ${b.servingsLeft} ${b.unitLabel ?? 'porzioni'} di "${b.name}"`);
     await db.batches.update(b.id, { servingsLeft: b.servingsLeft - opts.servings });
     const at = opts.at ?? Date.now();
     const txId = uid();

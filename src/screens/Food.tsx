@@ -11,7 +11,7 @@ import { fmtNum } from '../lib/id';
 import { FoodEditorSheet, STATE_LABEL, newFood } from './FoodEditor';
 import { RecipesTab, RecipeDetail, BarsCalculator } from './Recipes';
 import { PantryTab, ShoppingTab } from './Pantry';
-import { isFoodAllowed } from '../lib/recipes';
+import { isFoodAllowed, rulesFrom } from '../lib/recipes';
 
 type Sub = 'diario' | 'ricette' | 'dispensa' | 'spesa';
 
@@ -138,7 +138,7 @@ function AddFood({ slot, day, onDone }: { slot: MealSlot; day: string; onDone: (
   const [deduct, setDeduct] = useState(false);
   const [editor, setEditor] = useState<Food | null>(null);
   const [shortfall, setShortfall] = useState<string | null>(null);
-  const rules = { excludedTags: settings.excludedTags, allergies: settings.profile.allergies };
+  const rules = rulesFrom(settings);
   const list = useMemo(() => foods.filter((f) => (f.name + ' ' + f.brand + ' ' + f.barcode).toLowerCase().includes(q.toLowerCase())).sort((a, b) => Number(b.favorite) - Number(a.favorite)), [foods, q]);
   const pick = (f: Food) => { setSel(f); setQty(f.defaultPortion); setUnit(f.defaultUnit); setDeduct(stock.some((l) => l.foodId === f.id && l.qty > 0)); };
   const n = sel && qty != null ? nutrientsFor(sel, qty, unit) : null;
@@ -197,7 +197,7 @@ function AddBatch({ slot, day, onDone }: { slot: MealSlot; day: string; onDone: 
       <ul className="list">
         {batches.map((b) => (
           <li key={b.id} className="row between">
-            <div><strong>{b.name}</strong><br /><span className="small muted">{fmtNum(b.servingsLeft, 1)} di {b.servingsTotal} porzioni · {b.location} · preparato {formatDateIt(b.dateKey)}</span><br /><NutrientLine n={batchPortion(b, 1)} /> <span className="small muted">a porzione</span></div>
+            <div><strong>{b.name}</strong><br /><span className="small muted">{fmtNum(b.servingsLeft, 1)} di {b.servingsTotal} {b.unitLabel ?? 'porzioni'} · {b.location} · preparato {formatDateIt(b.dateKey)}</span><br /><NutrientLine n={batchPortion(b, 1)} /> <span className="small muted">{b.unitLabel === 'pezzi' ? 'a pezzo' : 'a porzione'}</span></div>
             <button className="btn sm primary" disabled={!servings} onClick={async () => {
               try { await eatBatchPortion({ batchId: b.id, servings: servings!, meal: slot, dateKey: day }); toast({ text: 'Porzione registrata ✓' }); onDone(); }
               catch (e) { toast({ text: String(e instanceof Error ? e.message : e), kind: 'error' }); }

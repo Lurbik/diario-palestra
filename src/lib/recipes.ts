@@ -2,7 +2,18 @@
 import type { DiaryEntry, Food, PlanEntry, PreparedBatch, Recipe, StockLot } from '../db/types';
 import { usableLots, expiringSoon } from './lots';
 
-export interface ExclusionRules { excludedTags: string[]; allergies: string[] }
+export interface ExclusionRules {
+  excludedTags: string[];
+  allergies: string[];
+  /** Eccezioni alle sole esclusioni per preferenza (es. "niente formaggi, ma la mozzarella sì"). Non valgono per le allergie. */
+  allowFoods?: string[];
+}
+
+/** Regole dalle impostazioni dell'utente (nessuna preferenza preimpostata). */
+export function rulesFrom(s: { excludedTags: string[]; allowedFoodIds?: string[]; profile: { allergies: string[] } }): ExclusionRules {
+  return { excludedTags: s.excludedTags, allergies: s.profile.allergies, allowFoods: s.allowedFoodIds ?? [] };
+}
+const excludedBy = (f: Food, rules: ExclusionRules) => (rules.allowFoods?.includes(f.id) ? undefined : f.tags.find((t) => rules.excludedTags.includes(t)));
 
 const norm = (s: string) => s.toLowerCase().trim();
 const allergyHit = (f: Food, a: string) => !!a && (f.tags.some((t) => norm(t).includes(norm(a))) || norm(f.name).includes(norm(a)) || (f.synonyms ?? []).some((s) => norm(s).includes(norm(a))));
@@ -17,7 +28,7 @@ export function exclusionReason(r: Recipe, foods: Map<string, Food>, rules: Excl
   for (const ing of r.ingredients) {
     const f = foods.get(ing.foodId);
     if (!f) return 'contiene un ingrediente non presente nel catalogo: compatibilità non verificabile';
-    const tag = f.tags.find((t) => rules.excludedTags.includes(t));
+    const tag = excludedBy(f, rules);
     if (tag) return `contiene "${f.name}" (${tag})`;
     const al = rules.allergies.find((a) => allergyHit(f, a));
     if (al) return `allergene dichiarato: ${al} (${f.name})`;
@@ -27,7 +38,7 @@ export function exclusionReason(r: Recipe, foods: Map<string, Food>, rules: Excl
 }
 
 export function isFoodAllowed(f: Food, rules: ExclusionRules) {
-  return !f.tags.some((t) => rules.excludedTags.includes(t)) && !rules.allergies.some((a) => allergyHit(f, a));
+  return !excludedBy(f, rules) && !rules.allergies.some((a) => allergyHit(f, a));
 }
 
 /** Quantità disponibile per alimento+unità contando solo lotti UTILIZZABILI. */

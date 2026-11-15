@@ -8,6 +8,7 @@ import { MUSCLE_LABEL, CONVENTION_LABEL } from '../ui/labels';
 import { configKey, exposuresFor } from '../lib/workout';
 import { formatDateIt, WEEKDAYS } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
+import { MachineButton } from './MachinePicker';
 
 /** Pagina di consultazione: semplice. La modifica avanzata è un'azione secondaria. */
 export function ExercisePage({ id }: { id: string }) {
@@ -31,8 +32,14 @@ export function ExercisePage({ id }: { id: string }) {
       </div>
       <div className="action-row mt">
         <button className="btn" aria-pressed={fav} onClick={async () => { await db.exercises.update(ex.id, { favorite: !fav }); }}>{fav ? <Icon.starFill /> : <Icon.star />} {fav ? 'Preferito' : 'Aggiungi ai preferiti'}</button>
-        <button className="btn primary" disabled={!program} onClick={() => setAddSheet(true)}><Icon.plus /> Aggiungi alla scheda</button>
+        {program ? <button className="btn primary" onClick={() => setAddSheet(true)}><Icon.plus /> Aggiungi alla scheda</button>
+          : <button className="btn primary" onClick={async () => {
+            const id = uid();
+            await db.programs.add({ id, name: `Scheda con ${ex.name}`, kind: 'custom', origin: 'user', isActive: true, notes: '', createdAt: Date.now(), days: [{ id: uid(), name: 'Giorno 1', weekday: null, items: [{ id: uid(), exerciseId: ex.id, sets: 2, repMin: ex.policyClass === 'isolation' ? 10 : 8, repMax: ex.policyClass === 'isolation' ? 15 : 12, rirTargets: [{ min: 1, max: 3 }, { min: 1, max: 3 }], restSec: 150, declaredLoad: '', declaredNotes: '', toConfirm: [], priority: null, sameAs: '' }] }] });
+            toast({ text: 'Scheda creata e attivata ✓' }); go(`allenamento/scheda/${id}`);
+          }}><Icon.plus /> Crea scheda con questo esercizio</button>}
       </div>
+      {(ex.equipmentKind === undefined || ex.equipmentKind === 'macchina' || ex.equipmentKind === 'multipower' || ex.equipmentKind === 'cavo' || ex.machineId) && <div className="mt"><MachineButton ex={ex} /></div>}
       <div className="grid-desktop mt">
         <section className="card">
           <div className="eyebrow">Muscoli coinvolti</div>

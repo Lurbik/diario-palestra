@@ -1,7 +1,7 @@
 // Operazioni sulle sedute. Il timer è SEMPRE ricostruito dai timestamp salvati,
 // non da un contatore di tick: sopravvive a blocco schermo, chiusura e riapertura.
 import { db } from '../db/db';
-import type { Exercise, Program, Session, SessionItem, SetEntry, Muscle } from '../db/types';
+import type { Exercise, Machine, Program, Session, SessionItem, SetEntry, Muscle } from '../db/types';
 import { uid } from './id';
 import { dateKey } from './dates';
 import type { Exposure } from './progression';
@@ -111,6 +111,28 @@ export async function finishSession(sessionId: string, notes?: string) {
 }
 
 /** Elimina una seduta e le sue serie (es. avviata per errore). */
+/**
+ * Cambia la macchina usata per un esercizio (es. hack squat 1 → hack squat 2 della stessa sala).
+ * La configurazione (configKey) include la macchina: ogni macchina ha storico, carichi e suggerimenti propri.
+ * Non incrementa configVersion: tornando a una macchina si ritrova il suo storico.
+ */
+export async function switchMachine(exerciseId: string, machineId: string | null) {
+  const ex = await db.exercises.get(exerciseId);
+  if (!ex) throw new Error('Esercizio non trovato');
+  await db.exercises.update(exerciseId, { machineId, userModified: ex.origin === 'catalog' ? true : ex.userModified });
+  return configKey({ ...ex, machineId });
+}
+
+export async function createMachine(m: { name: string; category?: string; seat?: string; backrest?: string; grip?: string; camLever?: string; increments?: number[]; notes?: string }) {
+  const machine: Machine = {
+    id: uid(), name: m.name.trim(), category: m.category ?? '', brand: '', model: '', seat: m.seat ?? '', backrest: m.backrest ?? '', rollers: '', grip: m.grip ?? '',
+    camLever: m.camLever ?? '', loadPoints: '', minLoadKg: null, increments: m.increments ?? [], barWeightKg: null, pulleyRatio: null, maxedOut: false, photoId: null,
+    notes: m.notes ?? '', toConfirm: [], origin: 'user'
+  };
+  await db.machines.add(machine);
+  return machine;
+}
+
 export async function discardSession(sessionId: string) {
   await db.transaction('rw', db.sets, db.sessions, async () => {
     await db.sets.where('sessionId').equals(sessionId).delete();
