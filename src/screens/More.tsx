@@ -8,6 +8,7 @@ import { patchSettings } from '../db/bootstrap';
 import { addDays, dateKey, formatDateIt, weekStart, weekdayOf, WEEKDAYS, WEEKDAYS_SHORT } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { planMeals } from '../lib/planner';
+import { isAwaySlot, coldAvailable, awayContextFrom } from '../lib/away';
 import { replaceProposals } from '../lib/planStore';
 import { rulesFrom } from '../lib/recipes';
 import { buildIcs } from '../lib/ics';
@@ -69,10 +70,10 @@ function CalendarScreen() {
   const dtOf = (d: string): DayType => (dayTypes.find((x) => x.key === `dayType:${d}`)?.value as DayType) ?? (program?.days.some((x) => x.weekday === weekdayOf(d)) ? 'palestra_pomeriggio' : 'riposo');
 
   const generate = async () => {
-    const away = settings.profile.fridgeAway !== 'si';
     const slots = days.filter((d) => d >= dateKey()).flatMap((d) => settings.mealWindows[dtOf(d)].filter((w) => w.enabled).map((w) => ({
       dateKey: d, slot: w.slot, maxActiveMin: settings.profile.defaultCookMin ?? null,
-      mustBePortable: away && dtOf(d) === 'universita' && (w.slot === 'spuntino_mattina' || w.slot === 'pranzo'), coldChainOk: settings.profile.coolerBag === 'si'
+      // Stessa regola di Oggi e dello Spuntino (away.ts): un frigo a destinazione non rende trasportabile un piatto.
+      mustBePortable: isAwaySlot(dtOf(d), w.slot), coldChainOk: coldAvailable(awayContextFrom(settings.profile))
     })));
     const [lots, batches, fb] = await Promise.all([db.stock.toArray(), db.batches.toArray(), db.kv.get('recipeFeedback')]);
     const kept = plan.filter((p) => p.locked || p.done || p.status === 'confirmed');
@@ -259,10 +260,10 @@ function SettingsScreen() {
         </div>
         <div className="mt"><strong className="small">Quando sei fuori casa (lavoro, studio)</strong>
           <div className="chips">
-            <Chip on={s.profile.fridgeAway === 'si'} onClick={() => set({ profile: { ...s.profile, fridgeAway: s.profile.fridgeAway === 'si' ? null : 'si' } })}>Ho un frigo</Chip>
-            <Chip on={s.profile.fridgeAway === 'no'} onClick={() => set({ profile: { ...s.profile, fridgeAway: s.profile.fridgeAway === 'no' ? null : 'no' } })}>Niente frigo</Chip>
-            <Chip on={s.profile.coolerBag === 'si'} onClick={() => set({ profile: { ...s.profile, coolerBag: s.profile.coolerBag === 'si' ? null : 'si' } })}>Uso la borsa termica</Chip>
-            <Chip on={s.profile.coolerBag === 'no'} onClick={() => set({ profile: { ...s.profile, coolerBag: s.profile.coolerBag === 'no' ? null : 'no' } })}>Senza borsa termica</Chip>
+            <Chip on={s.profile.fridgeAway === 'si'} onClick={() => set({ profile: { ...s.profile, fridgeAway: s.profile.fridgeAway === 'si' ? null : 'si' } })}>Frigo a destinazione</Chip>
+            <Chip on={s.profile.fridgeAway === 'no'} onClick={() => set({ profile: { ...s.profile, fridgeAway: s.profile.fridgeAway === 'no' ? null : 'no' } })}>Niente frigo a destinazione</Chip>
+            <Chip on={s.profile.coolerBag === 'si'} onClick={() => set({ profile: { ...s.profile, coolerBag: s.profile.coolerBag === 'si' ? null : 'si' } })}>Borsa termica nel tragitto</Chip>
+            <Chip on={s.profile.coolerBag === 'no'} onClick={() => set({ profile: { ...s.profile, coolerBag: s.profile.coolerBag === 'no' ? null : 'no' } })}>Niente borsa termica</Chip>
           </div>
         </div>
         <NumInput label="Target proteico (g/die)" value={s.proteinTargetG} onChange={(v) => set({ proteinTargetG: v })} decimals={false} />

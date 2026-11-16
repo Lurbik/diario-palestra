@@ -1,6 +1,8 @@
 // Ammissibilità delle ricette, suggerimenti e lista della spesa: deterministici e spiegabili.
 import type { DiaryEntry, Food, PlanEntry, PreparedBatch, Recipe, StockLot } from '../db/types';
 import { usableLots, expiringSoon } from './lots';
+import { simulatePlan, simEntryOf } from './mealSim';
+import { ambientOf } from './away';
 
 export interface ExclusionRules {
   excludedTags: string[];
@@ -90,7 +92,7 @@ export function suggestRecipes(args: {
     if (f.maxActiveMin != null && (r.activeMin == null || r.activeMin > f.maxActiveMin)) continue;
     if (f.portable && !r.portable) continue;
     if (f.eatCold && !r.eatCold) continue;
-    if (f.noColdChain && r.needsColdChain) continue;
+    if (f.noColdChain && ambientOf(r) !== 'ok') continue; // stesso criterio dei pasti fuori casa: "non verificato" non basta
     if (f.expiringFirst && expiringUsed === 0) continue;
     const score = (r.favorite ? 3 : 0) + (fb?.liked ? 2 : 0) - (fb?.tooSlow ? 1 : 0) + expiringUsed * 2 - missing.length - (repetitive ? 2 : 0);
     out.push({ recipe: r, missing, expiringUsed, excluded, score, repetitive });
@@ -103,32 +105,24 @@ export interface RecipeFeedback { liked?: boolean; never?: boolean; tooBig?: boo
 
 export interface ShoppingNeed { foodId: string; unit: string; needed: number; have: number; toBuy: number; unknownStock: boolean }
 
-/** Ingredienti del piano − scorte utilizzabili − porzioni pronte (riservate in ordine di data). */
+/**
+ * Lista della spesa = mancanze del simulatore condiviso con il pianificatore (mealSim.ts):
+ * porzioni pronte e avanzi prima, lotto intero per le ricette indivisibili, scorte valide alla data del pasto,
+ * pasti confermati prima delle proposte, pasti già mangiati esclusi.
+ */
 export function shoppingNeeds(args: { plan: PlanEntry[]; recipes: Map<string, Recipe>; foods: Map<string, Food>; lots: StockLot[]; batches: PreparedBatch[]; today: string; pantryTracked?: boolean }): ShoppingNeed[] {
-  const need = new Map<string, number>();
-  const batchLeft = new Map<string, number>();
-  for (const b of args.batches) if (b.recipeId && b.servingsLeft > 0) batchLeft.set(b.recipeId, (batchLeft.get(b.recipeId) ?? 0) + b.servingsLeft);
-  for (const p of [...args.plan].filter((x) => !x.done).sort((a, b) => a.dateKey.localeCompare(b.dateKey))) {
-    if (p.recipeId) {
-      const r = args.recipes.get(p.recipeId);
-      if (!r) continue;
-      const avail = batchLeft.get(r.id) ?? 0;
-      const fromBatch = Math.min(avail, p.servings);
-      batchLeft.set(r.id, avail - fromBatch);
-      const rest = p.servings - fromBatch;
-      if (rest <= 0) continue;
-      for (const i of r.ingredients) need.set(`${i.foodId}|${i.unit}`, (need.get(`${i.foodId}|${i.unit}`) ?? 0) + (i.qty * rest) / r.servings);
-    } else if (p.foodId) {
-      const f = args.foods.get(p.foodId);
-      const k = `${p.foodId}|${f?.defaultUnit ?? 'g'}`;
-      need.set(k, (need.get(k) ?? 0) + p.servings);
-    }
-  }
-  const stock = stockByFood(args.lots, args.today);
   const tracked = args.pantryTracked ?? true;
+  // Dispensa mai compilata: non sappiamo cosa c'è, quindi tutto il necessario resta "da comprare" (con avviso in UI).
+  const { outcomes } = simulatePlan({ entries: args.plan.filter((x) => !x.done && x.dateKey >= args.today).map(simEntryOf), recipes: args.recipes, foods: args.foods, lots: tracked ? args.lots : [], batches: args.batches, pantryTracked: true });
+  const need = new Map<string, number>();
+  const buy = new Map<string, number>();
+  for (const o of outcomes) {
+    for (const [k, q] of o.needs) need.set(k, (need.get(k) ?? 0) + q);
+    for (const m of o.missing) buy.set(`${m.foodId}|${m.unit}`, (buy.get(`${m.foodId}|${m.unit}`) ?? 0) + m.qty);
+  }
   return [...need.entries()].map(([k, n]) => {
     const [foodId, unit] = k.split('|');
-    const have = stock.get(k) ?? 0;
-    return { foodId, unit, needed: n, have, toBuy: Math.max(0, n - have), unknownStock: !tracked };
+    const toBuy = buy.get(k) ?? 0;
+    return { foodId, unit, needed: n, have: Math.max(0, n - toBuy), toBuy, unknownStock: !tracked };
   }).sort((a, b) => (args.foods.get(a.foodId)?.name ?? '').localeCompare(args.foods.get(b.foodId)?.name ?? ''));
 }

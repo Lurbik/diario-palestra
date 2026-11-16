@@ -7,6 +7,7 @@ import { Chip, go, useSettings, useToast } from '../ui/kit';
 import { patchSettings } from '../db/bootstrap';
 import { rulesFrom, type RecipeFeedback } from '../lib/recipes';
 import { snackForWork } from '../lib/snack';
+import { ambientOf } from '../lib/away';
 import { dateKey } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { recipeTotals, strictTotals } from '../lib/nutrition';
@@ -14,7 +15,7 @@ import { NutrientLine } from './Food';
 
 /** Trasportabile e "fuori frigo" sono due cose diverse: le mostro separate, con la fonte. */
 export function AmbientInfo({ r }: { r: Recipe }) {
-  const amb = r.ambient ?? (r.needsColdChain ? 'requires_cold' : 'not_verified');
+  const amb = ambientOf(r);
   return (
     <div className="card flat small" data-testid="ambient-info">
       <div><strong>Trasportabile:</strong> {r.portable ? 'sì (si porta in un contenitore)' : 'no'}</div>
@@ -35,9 +36,11 @@ export function WorkSnack() {
   const lots = useLiveQuery(() => db.stock.toArray(), []) ?? [];
   const tracked = useLiveQuery(() => db.kv.get('pantryTracking'), [])?.value === true;
   const fb = (useLiveQuery(() => db.kv.get('recipeFeedback'), [])?.value as Record<string, RecipeFeedback>) ?? {};
+  const plan = useLiveQuery(() => db.plan.where('dateKey').equals(dateKey()).toArray(), []) ?? [];
+  const batches = useLiveQuery(() => db.batches.filter((b) => b.servingsLeft > 0).toArray(), []) ?? [];
   if (!open) return <button className="btn block" style={{ marginBottom: 12 }} onClick={() => setOpen(true)}>Spuntino {salty ? 'salato' : ''} da portare al lavoro</button>;
   const fMap = new Map(foods.map((f) => [f.id, f]));
-  const res = snackForWork({ recipes, foods: fMap, lots, rules: rulesFrom(settings), today: dateKey(), coolerBag: settings.profile.coolerBag, fridgeAway: settings.profile.fridgeAway, pantryTracked: tracked, salty, feedback: fb });
+  const res = snackForWork({ recipes, foods: fMap, lots, rules: rulesFrom(settings), today: dateKey(), coolerBag: settings.profile.coolerBag, fridgeAway: settings.profile.fridgeAway, pantryTracked: tracked, salty, feedback: fb, plan, batches });
   const o = res.options.length ? res.options[idx % res.options.length] : null;
   const name = (id: string) => fMap.get(id)?.name ?? id;
   const addMissing = async () => {
@@ -58,10 +61,10 @@ export function WorkSnack() {
         <div data-testid="snack-option">
           <p className="mt0"><a href={`#/cibo/ricetta/${o.recipe.id}`}><strong data-testid="snack-name">{o.recipe.name}</strong></a> <span className="small muted">({idx % res.options.length + 1} di {res.options.length})</span></p>
           <div className="chips">
-            {o.canMakeNow === true && <span className="badge ok" data-testid="snack-status">Puoi prepararlo ora</span>}
+            {o.canMakeNow === true && <span className="badge ok" data-testid="snack-status">{o.ready ? 'Già pronto' : 'Puoi prepararlo ora'}</span>}
             {o.canMakeNow === false && <span className="badge warn" data-testid="snack-status">Mancano {o.missing.length} ingredienti</span>}
             {o.canMakeNow == null && <span className="badge" data-testid="snack-status">Dispensa non verificata</span>}
-            <span className="badge">{o.ambient === 'ok' ? 'Fuori frigo: ok' : 'Da tenere al freddo'}</span>
+            <span className="badge">{ambientOf(o.recipe) === 'ok' ? 'Fuori frigo: ok' : ambientOf(o.recipe) === 'requires_cold' ? 'Da tenere al freddo' : 'Fuori frigo: non verificato'}</span>
             <span className="badge">{o.recipe.activeMin ?? '?'} min</span>
           </div>
           <NutrientLine n={strictTotals(recipeTotals(o.recipe, fMap, 1 / o.recipe.servings).sum)} /> <span className="small muted">a porzione</span>
@@ -89,9 +92,9 @@ export function WorkSnack() {
       {res.needsCold.length > 0 && (
         <div className="small muted mt" data-testid="snack-needs-cold">
           {res.needsCold.length} altre richiedono il freddo ({res.needsCold.slice(0, 3).map((r) => r.name).join(', ')}{res.needsCold.length > 3 ? '…' : ''}).{' '}
-          {settings.profile.coolerBag == null && settings.profile.fridgeAway == null
-            ? <>Dimmi se fuori casa hai un frigo o la borsa termica: <button className="linklike" onClick={() => patchSettings({ profile: { ...settings.profile, coolerBag: 'si' } })}>uso la borsa termica</button> · <button className="linklike" onClick={() => go('altro/impostazioni')}>altre impostazioni</button></>
-            : <>Le hai escluse perché hai indicato niente frigo e niente borsa termica.</>}
+          {settings.profile.coolerBag !== 'si'
+            ? <>Senza borsa termica nel tragitto non le propongo{settings.profile.fridgeAway === 'si' ? ' (il frigo a destinazione non copre il viaggio)' : ''}: <button className="linklike" onClick={() => patchSettings({ profile: { ...settings.profile, coolerBag: 'si' } })}>uso la borsa termica</button> · <button className="linklike" onClick={() => go('altro/impostazioni')}>altre impostazioni</button></>
+            : null}
         </div>
       )}
       {res.excludedCount > 0 && <p className="small muted">{res.excludedCount} escluse per le tue esclusioni o allergie.</p>}

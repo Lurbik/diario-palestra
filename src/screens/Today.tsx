@@ -8,6 +8,8 @@ import { addDays, dateKey, formatDateIt, formatDuration, romeLocalToEpoch, timeH
 import { fmtNum, uid } from '../lib/id';
 import { estimateItemMin, sessionTimes } from '../lib/workout';
 import { planMeals } from '../lib/planner';
+import { isAwaySlot, coldAvailable, awayContextFrom } from '../lib/away';
+import { isFirm } from '../lib/mealSim';
 import { eatBatchPortion, eatRecipeDirect, ShortfallError } from '../lib/inventory';
 import { shoppingNeeds, rulesFrom } from '../lib/recipes';
 import { planSleep, sleepConflicts, tomorrowWake } from '../lib/sleep';
@@ -57,7 +59,9 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
   const proposals = useMemo(() => {
     if (!nextSlot || !recipes.length) return [] as { recipe: Recipe; servings: number; fromBatch: boolean; label: string }[];
     const rules = rulesFrom(settings);
-    const atWork = nextSlot === 'spuntino_mattina' || (nextSlot === 'pranzo' && dayType === 'universita');
+    // Stessa regola della Settimana e dello Spuntino (away.ts); i pasti già confermati oggi riservano le loro scorte.
+    const atWork = isAwaySlot(dayType, nextSlot);
+    const firmToday = plan.filter((p) => p.dateKey === today && p.slot !== nextSlot && !p.done && isFirm(p));
     const remainingKcal = target?.kcal != null && consumed.values.kcal != null ? Math.max(0, target.kcal - consumed.values.kcal) : null;
     const remainingSlots = windows.filter((w) => !logged.has(w.slot) && w.to >= hm).length || 1;
     const out: { recipe: Recipe; servings: number; fromBatch: boolean; label: string }[] = [];
@@ -67,12 +71,12 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
       if (k === 2 && !kvv('pantryTracking')) continue;
       const pool = recipes.filter((r) => !tried.has(r.id));
       const res = planMeals({
-        slots: [{ dateKey: today, slot: nextSlot, maxActiveMin: k === 1 ? Math.min(cookToday ?? 15, 10) : cookToday, mustBePortable: atWork, coldChainOk: settings.profile.coolerBag === 'si' || settings.profile.fridgeAway === 'si' }],
+        slots: [{ dateKey: today, slot: nextSlot, maxActiveMin: k === 1 ? Math.min(cookToday ?? 15, 10) : cookToday, mustBePortable: atWork, coldChainOk: coldAvailable(awayContextFrom(settings.profile)) }],
         recipes: pool, foods: fMap, lots, batches, rules, pantryTracked: !!kvv('pantryTracking'),
         // "con quello che hai": fattibilità calcolata per PORZIONE (o lotto intero se indivisibile)
         stockMode: k === 2 ? 'pantry_only' : 'can_buy', prefs: { saltyBreakfast: settings.profile.saltyBreakfast },
         kcalTarget: remainingKcal != null ? remainingKcal / remainingSlots : null, proteinTarget: settings.proteinTargetG ? settings.proteinTargetG / Math.max(3, windows.length) : null,
-        locked: [], previous: [], today, feedback: (kvv('recipeFeedback') as Record<string, never>) ?? {}, beamWidth: 6
+        locked: firmToday, lookupRecipes: recipes, previous: [], today, feedback: (kvv('recipeFeedback') as Record<string, never>) ?? {}, beamWidth: 6
       });
       const e = res.entries[0];
       if (!e) continue;
@@ -81,7 +85,7 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
       if (r) out.push({ recipe: r, servings: e.servings, fromBatch: e.fromBatch, label: ALT_LABELS[k] });
     }
     return out;
-  }, [nextSlot, recipes, fMap, lots, batches, settings, cookToday, target, consumed.values.kcal, dayType, today, hm]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [nextSlot, recipes, fMap, lots, batches, settings, cookToday, target, consumed.values.kcal, dayType, today, hm, plan]); // eslint-disable-line react-hooks/exhaustive-deps
   const pick = confirmed ? { recipe: recipes.find((r) => r.id === confirmed.recipeId)!, servings: confirmed.servings, fromBatch: batches.some((b) => b.recipeId === confirmed.recipeId), label: 'Confermato' } : proposals[alt % Math.max(1, proposals.length)];
 
   const eatPick = async () => {

@@ -15,6 +15,7 @@ import { fmtNum, uid } from '../lib/id';
 import { NutrientLine } from './Food';
 import { STATE_LABEL } from './FoodEditor';
 import { WorkSnack, AmbientInfo } from './WorkSnack';
+import { ambientOf } from '../lib/away';
 
 const DEFAULT_FILTER: RecipeFilter = { availability: 'any', maxMissing: 2, maxActiveMin: null, portable: false, eatCold: false, noColdChain: false, expiringFirst: false };
 
@@ -65,7 +66,7 @@ export function RecipesTab() {
         return (
           <a className="card" key={r.id} href={`#/cibo/ricetta/${r.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
             <div className="row"><span className="thumb"><CategoryIcon cat={r.category} /></span><div className="grow"><strong>{r.favorite ? '★ ' : ''}{r.name}</strong>{r.origin === 'legacy_seed' && <span className="badge"> versione precedente</span>}<br /><span className="small muted">{r.difficulty ?? ''}{r.eating?.oneHand ? ' · si mangia con una mano' : ''}</span></div></div>
-            <div className="small muted">{r.activeMin != null ? `${r.activeMin} min attivi` : 'tempo n.d.'}{r.totalMin != null ? ` · ${r.totalMin} totali` : ''} · {r.servings} {r.unitLabel === 'pezzi' ? 'pezzi' : 'porz.'}{r.portable ? ' · trasportabile' : ''}{r.ambient === 'ok' ? ' · fuori frigo: ok' : r.ambient === 'requires_cold' || r.needsColdChain ? ' · richiede freddo' : ''}</div>
+            <div className="small muted">{r.activeMin != null ? `${r.activeMin} min attivi` : 'tempo n.d.'}{r.totalMin != null ? ` · ${r.totalMin} totali` : ''} · {r.servings} {r.unitLabel === 'pezzi' ? 'pezzi' : 'porz.'}{r.portable ? ' · trasportabile' : ''}{r.portable ? (ambientOf(r) === 'ok' ? ' · fuori frigo: ok' : ambientOf(r) === 'requires_cold' ? ' · richiede freddo' : ' · fuori frigo: non verificato') : ''}</div>
             <NutrientLine n={n} /> <span className="small muted">a porzione</span>
             <div className="chips mt">
               {missing.length > 0 && <span className="badge">{missing.length} ingredienti mancanti</span>}
