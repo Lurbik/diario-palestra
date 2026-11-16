@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Picker, exercisePickItems, type PickItem } from '../ui/Picker';
+import { EXERCISE_FILTERS } from '../ui/labels';
+import { setTarget } from '../lib/setTarget';
 import { emptyPain, painLabel, urgentSigns, ZONE_LABEL, SIDE_LABEL, type PainDetail, type PainZone, type PainSide } from '../lib/painReport';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, kvGet, kvSet } from '../db/db';
 import type { Exercise, Machine, Session, SessionItem, SetEntry } from '../db/types';
 import { Chip, Icon, Sheet, Stepper, go, useNow, useSettings, useToast, NumInput, Check, Field } from '../ui/kit';
 import { CONVENTION_LABEL, describeSet, totalLoadNote } from '../ui/labels';
-import { configKey, deleteSet, discardSession, finishSession, previousPerformance, restState, saveSet, sessionTimes, togglePause, updateSet, estimateItemMin, type SetDraft } from '../lib/workout';
+import { configKey, deleteSet, discardSession, finishSession, previousPerformance, exposuresFor, restState, saveSet, sessionTimes, togglePause, updateSet, estimateItemMin, type SetDraft } from '../lib/workout';
 import { formatDateIt, formatDuration } from '../lib/dates';
 import { uid } from '../lib/id';
 import { setUnsaved } from '../lib/pwa';
@@ -102,6 +105,11 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
   const itemSets = sets.filter((s) => s.itemIndex === idx);
   // Dolore segnalato oggi su questo esercizio: niente proposte di carico più alto sul movimento
   const painHere = [...itemSets].reverse().find((s) => s.pain);
+  // Target della prossima serie: prescritto o suggerito, con i soli riscontri inseriti oggi
+  const histQ = useLiveQuery(async () => ({ ck, v: ck ? await exposuresFor(ck, session.id) : [] }), [ck, session.id]);
+  const hist = histQ && histQ.ck === ck ? histQ.v : [];
+  const unstable = hist.slice(-2).some((e: { sets: SetEntry[] }) => e.sets.some((s: SetEntry) => s.kind === 'working' && (s.techIssue || (s.validReps != null && s.validReps < s.fullReps))));
+  const lastLoad = [...itemSets].reverse().find((s) => s.kind === 'working' && s.load != null)?.load ?? null;
   const working = itemSets.filter((s) => s.kind === 'working');
   const times = sessionTimes(session, now);
   const rest = restState(session, now);
@@ -182,6 +190,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
 
   const setNo = working.length + 1;
   const loadStep = machine?.increments?.length ? Math.min(...machine.increments) : settings.loadStepKg;
+  const target = ex && item ? setTarget({ exercise: ex, item, exposures: hist.length, unstable, pain: !!painHere || !!pain, done: itemSets.filter((s) => s.kind === 'working'), position: { index: idx + 1, count: session.items.length }, lowerStep: lastLoad != null && loadStep ? Math.max(0, lastLoad - loadStep) : null }) : null;
 
   const doSave = async () => {
     if (!form || !ex || !item || saving) return;
@@ -271,7 +280,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
             {painHere && <PainBanner detail={painHere.painDetail} onStop={() => setPainOpen(true)} />}
             {form && (
               <CompareEntry form={form} setForm={setForm} ex={ex} machine={machine} loadStep={loadStep} item={item}
-                prev={prev} itemSets={itemSets} field={field} setField={setField} onEdit={(x) => setSheet({ edit: x })} />
+                prev={prev} itemSets={itemSets} field={field} setField={setField} onEdit={(x) => setSheet({ edit: x })} target={target} />
             )}
           </>
         )}
@@ -415,21 +424,17 @@ function EditSetSheet({ set, ex, loadStep, onClose }: { set: SetEntry; ex: Exerc
 }
 
 function AddExerciseSheet({ session, exercises, onClose }: { session: Session; exercises: Map<string, Exercise>; onClose: () => void }) {
-  const [q, setQ] = useState('');
-  const list = [...exercises.values()].filter((e) => (e.name + ' ' + e.aliases.join(' ')).toLowerCase().includes(q.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name));
+  const [items, setItems] = useState<PickItem[]>([]);
+  useEffect(() => { exercisePickItems((id) => (session.items.some((i) => i.exerciseId === id) ? 'già nella seduta' : undefined)).then(setItems); }, [session.items]);
   return (
-    <Sheet title="Aggiungi esercizio" onClose={onClose}>
-      <input type="search" placeholder="Cerca…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cerca esercizio" />
-      <ul className="list mt">
-        {list.map((e) => (
-          <li key={e.id}><button className="listbtn" onClick={async () => {
-            const items = [...session.items, { itemId: uid(), exerciseId: e.id, sets: null, repMin: null, repMax: null, rirTargets: [], restSec: 180, skipped: false }];
-            await db.sessions.update(session.id, { items, currentIndex: items.length - 1 });
-            onClose();
-          }}><span>{e.name}{e.aliases.length ? <span className="muted small"> · {e.aliases.join(', ')}</span> : null}</span><Icon.plus /></button></li>
-        ))}
-      </ul>
-    </Sheet>
+    <Picker title="Aggiungi alla seduta" multi recentKey="exercise" items={items} filters={EXERCISE_FILTERS} onClose={onClose}
+      context="Gli esercizi aggiunti valgono solo per questa seduta; la scheda non cambia."
+      onPick={async (picked) => {
+        const add = picked.map((x) => ({ itemId: uid(), exerciseId: x.id, sets: null, repMin: null, repMax: null, rirTargets: [], restSec: 180, skipped: false }));
+        const next = [...session.items, ...add];
+        await db.sessions.update(session.id, { items: next, currentIndex: session.items.length });
+        void exercises; onClose();
+      }} />
   );
 }
 

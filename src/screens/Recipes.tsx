@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FoodPicker } from './Pantry';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import type { MealSlot, Recipe } from '../db/types';
@@ -219,6 +220,9 @@ export function RecipeEditorSheet({ recipe, onClose }: { recipe: Recipe; onClose
   const foods = useLiveQuery(() => db.foods.orderBy('name').toArray(), []) ?? [];
   const [r, setR] = useState<Recipe>(structuredClone(recipe));
   const up = (p: Partial<Recipe>) => setR({ ...r, ...p });
+  // selettore alimento: indice dell'ingrediente da cambiare, oppure 'new' per aggiungerne uno (nessuna preselezione)
+  const [foodPick, setFoodPick] = useState<number | 'new' | null>(null);
+  const fById = new Map(foods.map((f) => [f.id, f]));
   return (
     <Sheet title="Modifica ricetta" onClose={onClose}>
       <div className="col">
@@ -231,9 +235,7 @@ export function RecipeEditorSheet({ recipe, onClose }: { recipe: Recipe; onClose
         <strong className="small">Ingredienti (peso a crudo, salvo stato indicato)</strong>
         {r.ingredients.map((i, k) => (
           <div key={k} className="card flat">
-            <select aria-label="Alimento" value={i.foodId} onChange={(e) => up({ ingredients: r.ingredients.map((x, j) => (j === k ? { ...x, foodId: e.target.value } : x)) })}>
-              {foods.map((f) => <option key={f.id} value={f.id}>{f.name} ({STATE_LABEL[f.state]})</option>)}
-            </select>
+            <button className="listbtn" aria-label={`Alimento: ${fById.get(i.foodId)?.name ?? i.foodId}. Cambia`} onClick={() => setFoodPick(k)}><span>{fById.get(i.foodId)?.name ?? i.foodId} <span className="small muted">({fById.get(i.foodId) ? STATE_LABEL[fById.get(i.foodId)!.state] : '?'})</span></span><span className="small">Cambia</span></button>
             <div className="row mt">
               <NumInput value={i.qty} onChange={(v) => up({ ingredients: r.ingredients.map((x, j) => (j === k ? { ...x, qty: v ?? 0 } : x)) })} />
               <select aria-label="Unità" value={i.unit} onChange={(e) => up({ ingredients: r.ingredients.map((x, j) => (j === k ? { ...x, unit: e.target.value as 'g' } : x)) })}><option value="g">g</option><option value="ml">ml</option><option value="pz">pz</option></select>
@@ -241,7 +243,8 @@ export function RecipeEditorSheet({ recipe, onClose }: { recipe: Recipe; onClose
             </div>
           </div>
         ))}
-        <button className="btn sm" onClick={() => up({ ingredients: [...r.ingredients, { foodId: foods[0]?.id ?? '', qty: 100, unit: 'g' }] })}><Icon.plus /> Ingrediente</button>
+        <button className="btn sm" onClick={() => setFoodPick('new')}><Icon.plus /> Ingrediente</button>
+        {foodPick != null && <FoodPicker onClose={() => setFoodPick(null)} onPick={(f) => { up({ ingredients: foodPick === 'new' ? [...r.ingredients, { foodId: f.id, qty: 100, unit: f.defaultUnit === 'pz' ? 'pz' : 'g' }] : r.ingredients.map((x, j) => (j === foodPick ? { ...x, foodId: f.id } : x)) }); setFoodPick(null); }} />}
         <Field label="Passaggi (uno per riga)"><textarea value={r.steps.join('\n')} onChange={(e) => up({ steps: e.target.value.split('\n').filter((s) => s.trim()) })} /></Field>
         <Field label="Attrezzatura (separata da virgola)"><input value={r.equipment.join(', ')} onChange={(e) => up({ equipment: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} /></Field>
         <div className="chips">{MEAL_ORDER.map((m) => <Chip key={m} on={r.mealSlots.includes(m)} onClick={() => up({ mealSlots: r.mealSlots.includes(m) ? r.mealSlots.filter((x) => x !== m) : [...r.mealSlots, m] })}>{MEAL_LABEL[m]}</Chip>)}</div>

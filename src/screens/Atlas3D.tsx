@@ -26,12 +26,17 @@ export const Atlas3D = forwardRef<Atlas3DHandle, {
   onAmbiguous?: (cands: MeshInfo[]) => void;
   /** nome da mostrare nell'anteprima sotto il dito */
   nameOf?: (m: MeshInfo) => string;
-}>(function Atlas3D({ buffer, selected, onSelect, paint, isolate, reduceMotion, onReady, onAmbiguous, nameOf }, ref) {
+  /** vista iniziale */
+  initialView?: 'front' | 'back' | 'left' | 'right';
+  /** modalità poster: disegna una volta, consegna l'immagine e libera il contesto WebGL */
+  snapshot?: (dataUrl: string) => void;
+}>(function Atlas3D({ buffer, selected, onSelect, paint, isolate, reduceMotion, onReady, onAmbiguous, nameOf, initialView, snapshot }, ref) {
   const host = useRef<HTMLDivElement>(null);
   const st = useRef<{ renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls; meshes: THREE.Mesh[]; outlines: THREE.LineSegments[]; render: () => void } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cb = useRef(onSelect); cb.current = onSelect;
   const amb = useRef(onAmbiguous); amb.current = onAmbiguous;
+  const paintRef = useRef(paint); paintRef.current = paint;
   const nm = useRef(nameOf); nm.current = nameOf;
   const [preview, setPreview] = useState<{ key: string; name: string; x: number; y: number } | null>(null);
 
@@ -57,7 +62,11 @@ export const Atlas3D = forwardRef<Atlas3DHandle, {
     const resize = () => { const w = el.clientWidth, h = el.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); render(); };
     controls.addEventListener('change', render);
     st.current = { renderer, scene, camera, controls, meshes, outlines: [], render };
-    camera.position.set(0, 1.05, 3.4); controls.update();
+    camera.position.set(0, 1.05, 3.4);
+    if (initialView === 'back') camera.position.set(0, 1.05, -3.4);
+    else if (initialView === 'left') camera.position.set(3.4, 1.05, 0);
+    else if (initialView === 'right') camera.position.set(-3.4, 1.05, 0);
+    controls.update();
 
     new GLTFLoader().parse(buffer.slice(0), '', (gltf) => {
       if (disposed) return;
@@ -76,6 +85,12 @@ export const Atlas3D = forwardRef<Atlas3DHandle, {
       scene.add(gltf.scene);
       resize();
       onReady?.(infos, Math.round(performance.now() - t0));
+      if (snapshot) {
+        // colori del poster applicati subito (stesso criterio del visualizzatore), poi immagine e rilascio del contesto
+        for (const m of meshes) { const u = m.userData as Record<string, string>; const pt = u.key ? paintRef.current?.get(u.key) : undefined; if (pt) (m.material as THREE.MeshLambertMaterial).color.setHex(COLORS[pt]); }
+        render();
+        snapshot(renderer.domElement.toDataURL('image/jpeg', 0.82));
+      }
     }, (e) => setError(`Modello non leggibile: ${String((e as unknown as { message?: string })?.message ?? e)}`));
 
     // Tocco = selezione (se il dito non si è spostato); trascinamento = rotazione.

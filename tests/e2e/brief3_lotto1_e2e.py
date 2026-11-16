@@ -134,8 +134,8 @@ with sync_playwright() as p:
     page.goto(BASE + "#/allenamento/esercizio/cx_high_row"); page.wait_for_selector("[data-testid=ex-editorial]")
     ed = page.get_by_test_id("ex-editorial").inner_text()
     check("Scheda esercizio: quando sceglierlo, dove metterlo, limiti del confronto, alternative", all(k in ed for k in ["Quando sceglierlo", "Dove metterlo", "non confrontabili", "Alternative se è occupato"]), ed[:160].replace("\n", " | "))
-    page.goto(BASE + "#/allenamento/esercizio/cx_panca_piana_bil"); page.wait_for_selector("[data-testid=ex-editorial]")
-    check("Esercizio senza scheda editoriale: lo dice invece di inventare", "non ancora compilata" in page.get_by_test_id("ex-editorial").inner_text())
+    page.goto(BASE + "#/allenamento/esercizio/cx_panca_piana_bil"); page.wait_for_selector("text=Panca piana con bilanciere"); page.wait_for_timeout(400)
+    check("Esercizio senza scheda editoriale: indicazione generale dichiarata come tale", page.get_by_test_id("ex-editorial-general").count() == 1 and "indicazione generale" in page.get_by_test_id("ex-editorial").inner_text().lower(), page.get_by_test_id("ex-editorial").inner_text()[:200].replace("\n", " | "))
 
     check("Nessun errore JavaScript nella pagina", not errors, "; ".join(errors)[:300])
     browser.close()

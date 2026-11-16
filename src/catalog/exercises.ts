@@ -5,7 +5,7 @@ import type { EquipmentKind, Exercise, LoadConvention, MovementPattern, Muscle }
 import { EQ_LABEL } from '../ui/labels';
 export { EQ_LABEL };
 
-export const EXERCISE_CATALOG_VERSION = 4;
+export const EXERCISE_CATALOG_VERSION = 5;
 
 type Cls = Exercise['policyClass'];
 const X = (
@@ -387,5 +387,46 @@ export const EXERCISE_CATALOG: Exercise[] = [
     'Cavo all\'altezza del gomito, un asciugamano arrotolato tra gomito e fianco.',
     ['Ruota l\'avambraccio verso l\'esterno tenendo il gomito fermo al fianco.', 'Torna lentamente.', 'Usa carichi che permettono di tenere il gomito fermo.'],
     ['Staccare il gomito dal fianco.', 'Usare carichi che costringono a ruotare il busto.']),
-    { whenToChoose: 'Come esercizio accessorio per i rotatori esterni della spalla. Non è una terapia: per un dolore alla spalla serve una valutazione qualificata.', whenToMove: 'A inizio o fine seduta, con carichi leggeri.', comparisonLimits: 'Carichi piccoli e rapporto delle carrucole ignoto: confronta solo sullo stesso cavo e alla stessa altezza.', alternatives: ['cx_face_pull'] })
+    { whenToChoose: 'Come esercizio accessorio per i rotatori esterni della spalla. Non è una terapia: per un dolore alla spalla serve una valutazione qualificata.', whenToMove: 'A inizio o fine seduta, con carichi leggeri.', comparisonLimits: 'Carichi piccoli e rapporto delle carrucole ignoto: confronta solo sullo stesso cavo e alla stessa altezza.', alternatives: ['cx_face_pull'] }),
+  // ---- Lotto 2026-11-c: lacune segnalate (schiena alta, avambraccio, alternative casa)
+  E(X('scrollate_man', 'Scrollate con manubri', ['shrug', 'scrollate'], 'altro', 'manubri', ['schiena_alta'], ['avambracci'], 'per_dumbbell', 'isolation', 1, false,
+    'In piedi, un manubrio per mano lungo i fianchi, braccia distese.',
+    ['Solleva le spalle verso le orecchie senza piegare i gomiti.', 'Fermati un istante in alto.', 'Scendi lentamente fino all\'allungamento.'],
+    ['Ruotare le spalle in cerchio.', 'Piegare i gomiti trasformandolo in una tirata.']),
+    { whenToChoose: 'Per lavorare direttamente la parte superiore del trapezio, che solleva la scapola.', whenToMove: 'A fine seduta: la presa affaticata limiterebbe le tirate successive.', comparisonLimits: 'Peso di un manubrio; cinghie sì/no cambiano il limite della presa: annotalo.', alternatives: ['cx_farmer_walk'] }),
+  E(X('alzata_y', 'Alzata a Y su panca inclinata', ['Y raise', 'alzata Y'], 'altro', 'manubri', ['schiena_alta'], ['deltoidi_laterali', 'deltoidi_posteriori'], 'per_dumbbell', 'isolation', 2, false,
+    'Petto appoggiato su una panca inclinata a circa 30–45°, manubri leggeri, pollici in alto.',
+    ['Solleva le braccia in avanti e verso l\'esterno formando una Y.', 'Porta le scapole in basso mentre sali.', 'Scendi lentamente.'],
+    ['Usare carichi che costringono a inarcare la schiena.', 'Scrollare le spalle verso le orecchie.']),
+    { whenToChoose: 'Come opzione per la parte inferiore del trapezio (abbassa e ruota verso l\'alto la scapola). Carichi leggeri.', whenToMove: 'A fine seduta o come accessorio dopo le tirate.', comparisonLimits: 'Inclinazione della panca e presa cambiano molto la difficoltà: annotale.', alternatives: ['cx_face_pull', 'cx_reverse_pec'] }),
+  E(X('rematore_appoggio', 'Rematore con manubri, petto in appoggio', ['chest supported row', 'rematore su panca inclinata'], 'tirata_orizzontale', 'manubri', ['schiena_alta', 'dorsali'], ['bicipiti', 'deltoidi_posteriori'], 'per_dumbbell', 'compound', 1, false,
+    'Petto su una panca inclinata a circa 30°, un manubrio per mano a braccia distese.',
+    ['Tira i gomiti indietro avvicinando le scapole.', 'Fermati un istante con le scapole unite.', 'Scendi lentamente fino a braccia distese.'],
+    ['Staccare il petto dalla panca.', 'Accorciare la discesa.']),
+    { whenToChoose: 'Per allenare la retrazione delle scapole (trapezio medio, romboidi) con il busto sostenuto: meno carico sulla zona lombare.', whenToMove: 'Dopo la tirata verticale del giorno, o per prima se la schiena alta è la priorità.', comparisonLimits: 'Inclinazione della panca e presa (prona/neutra) fanno parte della configurazione.', alternatives: ['cx_row_macchina', 'cx_rematore_man', 'cx_low_row_indip'] }),
+  E(X('retrazioni_cavo', 'Retrazioni scapolari al pulley', ['scapular retraction', 'retrazioni scapolari'], 'tirata_orizzontale', 'cavo', ['schiena_alta'], [], 'cable_stack', 'isolation', 2, false,
+    'Seduto al pulley basso, braccia tese, busto fermo.',
+    ['Senza piegare i gomiti, porta le scapole indietro.', 'Tieni un istante.', 'Lascia avanzare le scapole controllando.'],
+    ['Piegare i gomiti trasformandolo in un rematore.', 'Dondolare con il busto.']),
+    { whenToChoose: 'Esercizio breve per imparare a muovere le scapole; il movimento è piccolo e i carichi bassi.', whenToMove: 'Prima delle tirate come preparazione, o a fine seduta.', comparisonLimits: 'Escursione piccola: confronta solo con la stessa presa e lo stesso cavo.', alternatives: ['cx_rematore_appoggio', 'cx_face_pull'] }),
+  E(X('curl_inverso', 'Curl inverso con bilanciere EZ', ['reverse curl', 'curl presa prona'], 'bicipiti', 'bilanciere', ['avambracci'], ['bicipiti'], 'barbell_total', 'isolation', 1, false,
+    'In piedi, presa prona (palmi verso il basso) sul bilanciere EZ.',
+    ['Fletti i gomiti tenendoli vicini al corpo.', 'Tieni i polsi dritti.', 'Scendi lentamente.'],
+    ['Piegare i polsi.', 'Usare lo slancio del busto.']),
+    { whenToChoose: 'Per brachioradiale e brachiale con una presa che riduce il contributo del bicipite.', whenToMove: 'A fine seduta, dopo i curl.', comparisonLimits: 'Peso totale del bilanciere con dischi; la presa prona rende i kg non confrontabili con il curl normale.', alternatives: ['cx_curl_martello'] }),
+  E(X('curl_polso', 'Curl di polso con manubri', ['wrist curl', 'flessioni di polso'], 'altro', 'manubri', ['avambracci'], [], 'per_dumbbell', 'isolation', 1, false,
+    'Seduto, avambracci appoggiati sulle cosce, palmi in su, polsi oltre le ginocchia.',
+    ['Lascia scendere il manubrio fino alle dita.', 'Chiudi la mano e piega il polso verso l\'alto.', 'Scendi lentamente.'],
+    ['Sollevare l\'avambraccio dalla coscia.', 'Movimenti rapidi.']),
+    { whenToChoose: 'Per i flessori del polso, se la presa limita altri esercizi o se l\'avambraccio è una priorità.', whenToMove: 'A fine seduta.', comparisonLimits: 'Escursione e appoggio cambiano il carico: tieni la stessa posizione.', alternatives: ['cx_farmer_walk', 'cx_curl_inverso'] }),
+  E(X('floor_press_man', 'Floor press con manubri', ['distensioni a terra'], 'spinta_orizzontale', 'manubri', ['petto'], ['tricipiti', 'deltoidi_anteriori'], 'per_dumbbell', 'compound', 1, false,
+    'Sdraiato a terra, ginocchia piegate, un manubrio per mano sopra il petto.',
+    ['Scendi fino ad appoggiare i gomiti a terra.', 'Spingi verso l\'alto fino a braccia tese.', 'Mantieni i polsi sopra i gomiti.'],
+    ['Rimbalzare i gomiti sul pavimento.', 'Allargare troppo i gomiti.']),
+    { whenToChoose: 'Spinta orizzontale a casa senza panca: escursione più corta della panca.', whenToMove: 'Come prima spinta della seduta a casa.', comparisonLimits: 'Escursione limitata dal pavimento: non confrontare i kg con la panca.', alternatives: ['cx_piegamenti', 'cx_panca_piana_man'] }),
+  E(X('calf_mono_man', 'Calf in piedi su una gamba con manubrio', ['calf monopodalico'], 'polpacci', 'manubri', ['polpacci'], [], 'per_dumbbell', 'calves_abs', 1, true,
+    'Avampiede su un gradino, un manubrio nella mano dello stesso lato, l\'altra mano a un appoggio.',
+    ['Scendi con il tallone fino all\'allungamento.', 'Sali sulla punta il più possibile.', 'Completa un lato, poi cambia.'],
+    ['Rimbalzare in basso.', 'Piegare il ginocchio per aiutarsi.']),
+    { whenToChoose: 'Alternativa da casa al calf alla macchina; a ginocchio teso lavora molto il gastrocnemio.', whenToMove: 'A fine seduta.', comparisonLimits: 'Peso del manubrio e altezza del gradino: annotali; ripetizioni per lato.', alternatives: ['cx_calf_piedi', 'cx_calf_pressa'] })
 ];

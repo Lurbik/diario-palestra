@@ -53,3 +53,19 @@ export const EQ_LABEL: Record<EquipmentKind, string> = {
   macchina: 'Macchina', cavo: 'Cavo', manubri: 'Manubri', bilanciere: 'Bilanciere', multipower: 'Multipower', corpo_libero: 'Corpo libero'
 };
 
+
+export const PATTERN_LABEL: Record<string, string> = {
+  spinta_orizzontale: 'Spinta orizzontale', spinta_verticale: 'Spinta verticale', tirata_verticale: 'Tirata verticale', tirata_orizzontale: 'Tirata orizzontale',
+  accosciata: 'Accosciata', estensione_anca: 'Estensione d’anca', flessione_ginocchio: 'Flessione del ginocchio', estensione_ginocchio: 'Estensione del ginocchio',
+  polpacci: 'Polpacci', adduzione: 'Adduzione', abduzione: 'Abduzione', bicipiti: 'Flessione del gomito', tricipiti: 'Estensione del gomito',
+  alzate_laterali: 'Abduzione della spalla', deltoidi_posteriori: 'Estensione orizzontale della spalla', addome: 'Addome', stabilizzazione: 'Stabilizzazione', altro: 'Altro'
+};
+
+/** Filtri standard del selettore esercizi. */
+export const EXERCISE_FILTERS = [
+  { key: 'involved', label: 'Muscolo', options: (Object.keys(MUSCLE_LABEL) as Muscle[]).map((m) => ({ value: m, label: MUSCLE_LABEL[m] })) },
+  { key: 'eq', label: 'Attrezzo', options: Object.entries(EQ_LABEL).map(([value, label]) => ({ value, label })) },
+  { key: 'pattern', label: 'Gesto', options: Object.entries(PATTERN_LABEL).map(([value, label]) => ({ value, label })) },
+  { key: 'uni', label: 'Lato', options: [{ value: 'bi', label: 'Bilaterale' }, { value: 'uni', label: 'Unilaterale' }] },
+  { key: 'fav', label: 'Preferiti', options: [{ value: 'true', label: 'Solo preferiti' }] }
+];

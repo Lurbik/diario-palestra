@@ -59,7 +59,7 @@ with sync_playwright() as p:
     page.get_by_test_id("atlas3d-list").get_by_role("button", name=re.compile("Deltoide, porzione laterale")).click()
     page.wait_for_selector("[data-testid=atlas3d-card]")
     check("Lista: porzione laterale (acromiale) del deltoide selezionata, indirizzo aggiornato", "deltoid_lateral" in page.url and "porzione laterale (acromiale)" in page.get_by_test_id("atlas3d-card").inner_text(), page.url)
-    page.get_by_role("tab", name="Esercizi compatibili").click()
+    page.get_by_test_id("atlas3d-card").get_by_role("tab", name="Esercizi", exact=True).click()
     exs = page.get_by_test_id("atlas3d-ex").inner_text()
     check("Esercizi compatibili per la porzione laterale (relazioni esplicite)", "Alzate laterali al cavo" in exs and "principale" in exs, exs[:160].replace("\n", " | "))
     page.get_by_test_id("atlas3d-ex").get_by_role("link", name=re.compile("Alzate laterali al cavo")).click()
@@ -106,7 +106,7 @@ with sync_playwright() as p:
     # Inverso: dalla panca inclinata
     page.goto(BASE + "#/allenamento/esercizio/cx_panca_incl_man"); page.wait_for_selector("[data-testid=ex-structures]")
     exs = page.get_by_test_id("ex-structures").inner_text()
-    check("Scheda panca inclinata: principale, coinvolto e possibile enfasi sul capo clavicolare (evidenza limitata)", "capo clavicolare — possibile enfasi (evidenza limitata)" in exs and "principale" in exs, exs.replace("\n", " | ")[:200])
+    check("Scheda panca inclinata: principale, coinvolto e possibile enfasi sul capo clavicolare (evidenza limitata)", re.search(r"possibile enfasi:[^|]*capo clavicolare[^|]*evidenza limitata", exs.replace("\n", " | "), re.I) is not None and "principale" in exs.lower(), exs.replace("\n", " | ")[:200])
     check("Scheda esercizio senza sagoma schematica", page.locator("svg.body, .body-svg").count() == 0)
     page.get_by_test_id("ex-open-atlas").click()
     page.wait_for_selector("[data-testid=atlas-ex]"); page.wait_for_selector("[data-testid=atlas3d-load]", timeout=60000)

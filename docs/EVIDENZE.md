@@ -92,3 +92,21 @@ Le domande di sicurezza (reni, cuore o pressione, farmaci, gravidanza, minore et
 | Ordine degli esercizi | [Nunes et al. 2020](https://pubmed.ncbi.nlm.nih.gov/32077380/) | revisione e meta-analisi | miglioramento di forza maggiore nell'esercizio messo prima | una superiorità generale per l'ipertrofia |
 | Criteri d'urgenza per dolore articolare | [NHS, joint pain](https://www.nhs.uk/symptoms/joint-pain/) | indicazioni generali per il pubblico | quando chiedere assistenza | diagnosi; i riferimenti al servizio sanitario inglese non vengono copiati |
 | Creatina 3–5 g/die, carico non necessario | [ISSN 2017](https://pubmed.ncbi.nlm.nih.gov/28615996/), [AIS](https://www.ausport.gov.au/ais/nutrition/supplements/group_a/performance-supplements2/creatine/how-and-when-do-i-use-it) | adulti sani | protocolli generali | dosi personalizzate; uso in presenza di malattie o farmaci |
+
+## 9. Target per singola serie: cosa viene dalle prove e cosa è una scelta del software (16 novembre 2026)
+
+Una sola funzione (`src/lib/setTarget.ts`) produce la frase prima di ogni serie: «Esercizio 2 di 5 · serie 1 di 2 · 6–8 ripetizioni · mira a RIR 2–3 · recupero 3 min», con l’origine dichiarata (**prescritto da te** oppure **suggerito**) e il dettaglio «Perché».
+
+| Regola nell’app | Base | Tipo |
+|---|---|---|
+| Serie vicine al cedimento (RIR circa 0–3) danno ipertrofia simile al cedimento con meno fatica | Robinson 2024 (dose-risposta della vicinanza al cedimento), Refalo 2024 | evidenza moderata |
+| Più serie settimanali → più ipertrofia, con rendimenti decrescenti | Pelland 2025; ACSM 2026 (position stand sulla resistenza) | evidenza buona sulle medie |
+| Esercizio messo per primo → migliora soprattutto la forza in quell’esercizio | Nunes 2020 | evidenza moderata |
+| Prima serie con un margine più ampio delle successive (es. multiarticolare pesante RIR 2–3, poi 2) | prudenza sulla stima del RIR, che è meno precisa lontano dal cedimento e con poca esperienza | **default del software** |
+| Primo approccio o tecnica instabile → RIR più alto (3–4 sui multiarticolari pesanti) | stessa logica di prudenza | **default del software** |
+| Dolore segnalato → RIR 3–4 e nessun invito ad aumentare | regola di sicurezza dell’app, non una terapia | **regola del software** |
+| «Non so» il RIR → nessuna deduzione; parziali registrate a parte | integrità del dato | **regola di misura** |
+| Esercizi a tempo o distanza → nessun RIR | il RIR è definito sulle ripetizioni | **regola di misura** |
+| Serie iniziali per un esercizio nuovo: circa 2 | punto di partenza modificabile, non una dose ottimale | **default del software** |
+
+Durate delle schede: calcolate (`src/lib/duration.ts`) come serie × 45 s + recuperi + 2 min per esercizio, 5 min di riscaldamento e 2 min di avvicinamento per i multiarticolari in apertura. È una stima, non una misura: il tempo reale dipende da attese e cambi d’attrezzo.

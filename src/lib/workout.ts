@@ -39,7 +39,7 @@ export async function startSession(opts: { program: Program | null; dayId: strin
   const day = opts.program?.days.find((d) => d.id === opts.dayId) ?? null;
   const items: SessionItem[] = (day?.items ?? []).map((it) => ({
     itemId: it.id, exerciseId: it.exerciseId, sets: it.sets, repMin: it.repMin, repMax: it.repMax,
-    rirTargets: it.rirTargets, restSec: it.restSec, skipped: (opts.skipItemIds ?? []).includes(it.id)
+    rirTargets: it.rirTargets, rirManual: it.rirManual, restSec: it.restSec, skipped: (opts.skipItemIds ?? []).includes(it.id)
   }));
   const now = Date.now();
   const s: Session = {

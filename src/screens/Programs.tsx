@@ -1,11 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import type { Program, ProgramDay, ProgramItem, RirTarget } from '../db/types';
-import { Check, Field, Icon, NumInput, Sheet, go, useSettings, useToast } from '../ui/kit';
+import { Check, Field, Icon, NumInput, Sheet, Tabs, go, useSettings, useToast } from '../ui/kit';
+import { parseProgramFile, previewProgramImport, applyProgramImport, exportPrograms, type ProgramFile, type ProgramImportPreview } from '../lib/programImport';
+import { rankTemplates } from '../catalog/templates';
+import { estimateDayMinutes } from '../lib/duration';
+import { EQ_LABEL } from '../ui/labels';
+import { downloadText } from '../lib/backup';
 import { WEEKDAYS } from '../lib/dates';
 import { uid } from '../lib/id';
-import { proposedRir } from '../lib/progression';
+import { suggestedRirTargets, newProgramItem, RANGE_PROPOSAL } from '../lib/setTarget';
+import { Picker, exercisePickItems, type PickItem } from '../ui/Picker';
+import { EXERCISE_FILTERS } from '../ui/labels';
 import { patchSettings } from '../db/bootstrap';
 import { setUnsaved } from '../lib/pwa';
 import { activateTemplate } from './Onboarding';
@@ -14,64 +21,121 @@ const KIND_LABEL = { declared: 'Dichiarata', template: 'Template dimostrativo', 
 
 export function ProgramsScreen() {
   const programs = useLiveQuery(() => db.programs.toArray(), []) ?? [];
+  const exercises = useLiveQuery(() => db.exercises.toArray(), []) ?? [];
+  const settings = useSettings();
   const toast = useToast();
+  const [tab, setTab] = useState<'mine' | 'reco' | 'all'>('mine');
+  const [imp, setImp] = useState<null | { file: ProgramFile; preview: ProgramImportPreview; done?: string[] }>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const cls = new Map(exercises.map((e) => [e.id, e.policyClass]));
+  const eqOf = new Map(exercises.map((e) => [e.id, e.equipmentKind]));
   const duplicate = async (p: Program) => {
-    const copy: Program = { ...structuredClone(p), id: uid(), name: `${p.name} (copia)`, kind: 'custom', origin: 'user', catalogVersion: undefined, isActive: false, createdAt: Date.now() };
+    const copy: Program = { ...structuredClone(p), id: uid(), name: `${p.name} (copia)`, kind: 'custom', origin: 'user', catalogVersion: undefined, isActive: false, createdAt: Date.now(), revision: 1 };
     copy.days = copy.days.map((d) => ({ ...d, id: uid(), items: d.items.map((i) => ({ ...i, id: uid() })) }));
     await db.programs.add(copy);
-    toast({ text: 'Scheda duplicata' });
+    toast({ text: 'Scheda duplicata: la versione precedente resta com\'era' });
     go(`allenamento/scheda/${copy.id}`);
   };
   const activate = async (id: string) => {
     await db.transaction('rw', db.programs, async () => {
       for (const p of await db.programs.toArray()) await db.programs.update(p.id, { isActive: p.id === id });
     });
+    toast({ text: 'Scheda attiva' });
   };
   const create = async () => {
     const p: Program = { id: uid(), name: 'Nuova scheda', kind: 'custom', origin: 'user', isActive: false, notes: '', createdAt: Date.now(), days: [{ id: uid(), name: 'Giorno 1', weekday: 1, items: [] }] };
     await db.programs.add(p);
     go(`allenamento/scheda/${p.id}`);
   };
+  const exportOne = async (p: Program) => downloadText(`scheda-${p.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.json`, await exportPrograms([p.id]), 'application/json');
+  const onFile = async (f: File | undefined) => {
+    if (!f) return;
+    try { const file = parseProgramFile(await f.text()); setImp({ file, preview: await previewProgramImport(file) }); }
+    catch (e) { toast({ text: String(e instanceof Error ? e.message : e), kind: 'error' }); }
+    if (fileInput.current) fileInput.current.value = '';
+  };
+  const week = (p: Program) => {
+    const mins = p.days.filter((d) => d.items.length).map((d) => estimateDayMinutes(d.items, (id) => cls.get(id)));
+    const eq = [...new Set(p.days.flatMap((d) => d.items.map((i) => eqOf.get(i.exerciseId))).filter(Boolean))] as string[];
+    return `${p.days.length} giorni · ${mins.length ? (Math.min(...mins) === Math.max(...mins) ? Math.min(...mins) : Math.min(...mins) + '–' + Math.max(...mins)) + ' min a seduta' : 'vuota'}${eq.length ? ' · ' + eq.map((x) => EQ_LABEL[x as keyof typeof EQ_LABEL] ?? x).join(', ') : ''}`;
+  };
+  const prof = settings.profile;
+  const ranked = rankTemplates({ days: prof.trainingDaysPerWeek, equipment: prof.equipment, experience: prof.experience, minutes: prof.sessionMinutes });
+  const list = programs.filter((p) => !p.archived && (tab === 'mine' ? p.kind !== 'template' : tab === 'all'))
+    .sort((a, b) => Number(b.isActive) - Number(a.isActive) || Number(a.kind === 'template') - Number(b.kind === 'template'));
+  const Card = ({ p, reasons }: { p: Program; reasons?: string[] }) => (
+    <div className={`card ${p.isActive ? 'accent' : ''}`} data-testid="program-card">
+      <div className="row between"><span className="badge">{KIND_LABEL[p.kind]}</span>{p.isActive && <span className="badge accent">Attiva</span>}</div>
+      <h3 className="mt">{p.name}</h3>
+      <p className="small" data-testid="program-week">{week(p)}</p>
+      <p className="small muted">{p.days.map((d) => `${d.weekday ? WEEKDAYS[d.weekday].slice(0, 3) : '—'}: ${d.name}`).join(' · ')}</p>
+      {reasons && <p className="small muted">{reasons.join(' · ')}</p>}
+      {p.origin === 'legacy_seed' && p.kind !== 'template' && (
+        <div className="row wrap mb0" style={{ marginBottom: 8 }}>
+          <span className="small grow">Scheda del vecchio avvio precompilato: resta solo su questo dispositivo.</span>
+          <button className="btn sm primary" onClick={async () => { await db.programs.update(p.id, { origin: 'user', kind: 'custom' }); toast({ text: 'Ora è una tua scheda personale' }); }}>Mantieni come mia</button>
+          <button className="btn sm" onClick={async () => { await db.programs.update(p.id, { archived: true, isActive: false }); toast({ text: 'Archiviata (non cancellata): lo storico resta.' }); }}>Archivia</button>
+        </div>
+      )}
+      <div className="row wrap">
+        <a className="btn sm" href={`#/allenamento/scheda/${p.id}`}><Icon.edit /> Apri</a>
+        {!p.isActive && p.kind === 'template' && <button className="btn sm primary" onClick={async () => { await activateTemplate(p.id); toast({ text: 'Copia creata e attivata ✓' }); }}>Usa come mia scheda</button>}
+        {!p.isActive && p.kind !== 'template' && <button className="btn sm" onClick={() => activate(p.id)}>Rendi attiva</button>}
+        <button className="btn sm" onClick={() => duplicate(p)}>Duplica</button>
+        {p.kind !== 'template' && <button className="btn sm" onClick={() => exportOne(p)}>Esporta</button>}
+      </div>
+    </div>
+  );
   return (
     <main className="main">
       <a href="#/allenamento" className="small">‹ Allenamento</a>
       <h1>Schede</h1>
-      <p className="small muted">La scheda attiva determina l'allenamento proposto per ogni giorno. Nessuna nuova scheda viene imposta: i template sono modelli dimostrativi modificabili, non piani validati.</p>
-      {programs.filter((p) => !p.archived).sort((a, b) => Number(b.isActive) - Number(a.isActive) || Number(a.kind === 'template') - Number(b.kind === 'template')).map((p) => (
-        <div className={`card ${p.isActive ? 'accent' : ''}`} key={p.id}>
-          <div className="row between"><span className="badge">{KIND_LABEL[p.kind]}</span>{p.isActive && <span className="badge accent">Attiva</span>}</div>
-          <h3 className="mt">{p.name}</h3>
-          <p className="small muted">{p.days.map((d) => `${d.weekday ? WEEKDAYS[d.weekday].slice(0, 3) : '—'}: ${d.name}`).join(' · ')}</p>
-          {p.origin === 'legacy_seed' && p.kind !== 'template' && (
-            <div className="banner warn small">
-              <span className="grow">Scheda creata dal vecchio avvio precompilato di una versione precedente. Resta solo su questo dispositivo: decidi tu se tenerla.</span>
-            </div>
-          )}
-          {p.origin === 'legacy_seed' && p.kind !== 'template' && (
-            <div className="row wrap mb0" style={{ marginBottom: 8 }}>
-              <button className="btn sm primary" onClick={async () => { await db.programs.update(p.id, { origin: 'user', kind: 'custom' }); toast({ text: 'Ora è una tua scheda personale' }); }}>Mantieni come mia</button>
-              <button className="btn sm" onClick={async () => { await db.programs.update(p.id, { archived: true, isActive: false }); toast({ text: 'Archiviata (non cancellata): lo storico resta.' }); }}>Archivia</button>
-            </div>
-          )}
-          <div className="row wrap">
-            <a className="btn sm" href={`#/allenamento/scheda/${p.id}`}><Icon.edit /> Apri</a>
-            {!p.isActive && p.kind === 'template' && <button className="btn sm primary" onClick={async () => { await activateTemplate(p.id); toast({ text: 'Copia creata e attivata ✓' }); }}>Usa come mia scheda</button>}
-            {!p.isActive && p.kind !== 'template' && <button className="btn sm" onClick={() => activate(p.id)}>Rendi attiva</button>}
-            <button className="btn sm" onClick={() => duplicate(p)}>Duplica</button>
-          </div>
-        </div>
-      ))}
-      <button className="btn block" onClick={create}><Icon.plus /> Nuova scheda vuota</button>
+      <div className="row wrap" style={{ marginBottom: 10 }}>
+        <button className="btn sm primary" onClick={create}><Icon.plus /> Crea</button>
+        <button className="btn sm" onClick={() => fileInput.current?.click()}>Importa una scheda</button>
+        <input ref={fileInput} type="file" accept="application/json,.json" hidden aria-label="File della scheda da importare" onChange={(e) => onFile(e.target.files?.[0])} data-testid="import-input" />
+      </div>
+      <Tabs value={tab} onChange={setTab} items={[['mine', 'La mia'], ['reco', 'Consigliate'], ['all', 'Tutte']]} />
+      {tab === 'reco' && (
+        <>
+          <p className="small muted">Prima i vincoli (giorni, attrezzatura, minuti a seduta), poi esperienza e preferenze. Durate calcolate da serie, recuperi, avvicinamenti e transizioni. {prof.trainingDaysPerWeek == null || prof.sessionMinutes == null ? 'Indica giorni e minuti nel profilo per consigli più precisi.' : ''}</p>
+          {ranked.slice(0, 3).map((t) => { const p = programs.find((x) => x.id === t.id); if (!p) return null; const exact = prof.trainingDaysPerWeek == null || t.days === prof.trainingDaysPerWeek; const fits = prof.sessionMinutes == null || t.minutes <= prof.sessionMinutes;
+            return <div key={t.id}>{(!exact || !fits) && <p className="small banner warn">Compromesso: {!exact ? `${t.days} giorni invece di ${prof.trainingDaysPerWeek}` : ''}{!exact && !fits ? ' · ' : ''}{!fits ? `circa ${t.minutes} min contro ${prof.sessionMinutes}` : ''}</p>}<Card p={p} reasons={[...t.reasons, t.path]} /></div>; })}
+        </>
+      )}
+      {tab !== 'reco' && list.map((p) => <Card key={p.id} p={p} />)}
+      {tab === 'mine' && !list.length && <p className="empty">Nessuna scheda personale. <button className="linklike" onClick={() => setTab('reco')}>Guarda le consigliate</button> oppure crea o importa una scheda.</p>}
       {programs.some((p) => p.archived) && (
         <details className="card flat mt"><summary>Archiviate ({programs.filter((p) => p.archived).length})</summary>
           <ul className="list">{programs.filter((p) => p.archived).map((p) => <li key={p.id} className="row between"><span className="small">{p.name}</span><button className="btn sm" onClick={() => db.programs.update(p.id, { archived: false })}>Ripristina</button></li>)}</ul>
         </details>
       )}
+      {imp && (
+        <Sheet title="Importa una scheda" onClose={() => setImp(null)}>
+          <div data-testid="import-preview" className="small">
+            <p><strong>Importazione aggiuntiva:</strong> non sostituisce il diario, non cambia la scheda attiva e non crea sedute.</p>
+            <ul>{imp.preview.programs.map((x) => <li key={x.id}>{x.name} ({x.days} giorni): <strong>{x.status === 'nuova' ? 'nuova' : x.status === 'identica' ? 'già presente, identica (saltata)' : 'diversa dalla tua: tengo la tua'}</strong></li>)}</ul>
+            <p>Esercizi personali: {imp.preview.exercises.added} nuovi, {imp.preview.exercises.identical} già presenti{imp.preview.exercises.conflicts ? `, ${imp.preview.exercises.conflicts} diversi (tengo i tuoi)` : ''}. Macchine: {imp.preview.machines.added} nuove.</p>
+            {imp.preview.missing.length > 0 && <p className="banner warn">Mancano {imp.preview.missing.length} esercizi richiesti ({[...new Set(imp.preview.missing.map((m) => m.exerciseId))].slice(0, 5).join(', ')}): l'importazione non è possibile finché il file non li contiene.</p>}
+            {imp.preview.ignored.length > 0 && <p className="muted">Ignorati dal file (non riguardano le schede): {imp.preview.ignored.join(', ')}.</p>}
+          </div>
+          {!imp.done ? (
+            <div className="grid2"><button className="btn" onClick={() => setImp(null)}>Annulla</button>
+              <button className="btn primary" disabled={imp.preview.missing.length > 0} onClick={async () => {
+                try { const r = await applyProgramImport(imp.file); toast({ text: `Importate ${r.programs} schede, ${r.exercises} esercizi; ${r.skipped} voci già presenti saltate` }); setImp({ ...imp, done: imp.file.programs.map((x) => x.id) }); }
+                catch (e) { toast({ text: String(e instanceof Error ? e.message : e), kind: 'error' }); }
+              }}>Importa</button></div>
+          ) : (
+            <div className="col"><p className="small">Fatto. Vuoi usarne una adesso?</p>
+              {imp.file.programs.map((x) => <button key={x.id} className="btn primary" onClick={async () => { await activate(x.id); setImp(null); setTab('mine'); }}>Rendi attiva «{x.name}»</button>)}
+              <button className="btn" onClick={() => { setImp(null); setTab('mine'); }}>Più tardi</button></div>
+          )}
+        </Sheet>
+      )}
     </main>
   );
 }
 
-const RANGE_PROPOSAL: Record<string, [number, number]> = { heavy_compound: [6, 10], compound: [8, 12], isolation: [10, 15], calves_abs: [10, 15] };
 
 export function ProgramEditor({ id }: { id: string }) {
   const stored = useLiveQuery(() => db.programs.get(id), [id]);
@@ -83,6 +147,10 @@ export function ProgramEditor({ id }: { id: string }) {
   const [dirty, setDirty] = useState(false);
   const [policySheet, setPolicySheet] = useState(false);
   const [del, setDel] = useState(false);
+  // selettore: aggiunta multipla a un giorno, oppure cambio di un esercizio
+  const [pick, setPick] = useState<null | { di: number; ii?: number }>(null);
+  const [pickItems, setPickItems] = useState<PickItem[]>([]);
+  useEffect(() => { if (pick) exercisePickItems().then(setPickItems); }, [pick]);
   useEffect(() => { if (stored && !dirty) setP(structuredClone(stored)); }, [stored, dirty]);
   useEffect(() => { setUnsaved('program-editor', dirty); return () => setUnsaved('program-editor', false); }, [dirty]);
   if (!p) return <main className="main"><p className="muted">Caricamento…</p></main>;
@@ -105,7 +173,7 @@ export function ProgramEditor({ id }: { id: string }) {
   const applyPolicy = async () => {
     const np = { ...p, days: p.days.map((d) => ({ ...d, items: d.items.map((it) => {
       const ex = exMap.get(it.exerciseId);
-      return it.sets && ex ? { ...it, rirTargets: proposedRir(ex.policyClass, it.sets) } : it;
+      return it.sets && ex ? { ...it, rirTargets: suggestedRirTargets(ex.policyClass, it.sets, 3), rirManual: false } : it;
     }) })) };
     change(np);
     await db.decisions.add({ id: uid(), at: Date.now(), scope: 'program', refId: p.id, ruleId: 'policy_5A_rir', decision: 'accepted', detail: 'Applicati target RIR proposti (da salvare)', reviewAfter: null });
@@ -142,11 +210,7 @@ export function ProgramEditor({ id }: { id: string }) {
                   <span className="grow">{ii + 1}. {ex?.name ?? it.exerciseId}<br /><span className="small muted">{it.sets ?? '?'} × {it.repMin ?? '?'}{it.repMax && it.repMax !== it.repMin ? '–' + it.repMax : ''}{it.declaredLoad ? ` · ${it.declaredLoad}` : ''}{it.priority != null ? ` · priorità ${it.priority}` : ''}</span></span>
                 </summary>
                 <div className="col">
-                  <Field label="Esercizio">
-                    <select value={it.exerciseId} onChange={(e) => upItem(di, ii, { exerciseId: e.target.value })}>
-                      {exercises.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                    </select>
-                  </Field>
+                  <button className="btn sm" onClick={() => setPick({ di, ii })}>Cambia esercizio…</button>
                   <div className="grid3">
                     <NumInput label="Serie" value={it.sets} decimals={false} onChange={(v) => upItem(di, ii, { sets: v, rirTargets: Array.from({ length: v ?? 0 }, (_, k) => it.rirTargets[k] ?? null) })} />
                     <NumInput label="Rip. min" value={it.repMin} decimals={false} onChange={(v) => upItem(di, ii, { repMin: v })} />
@@ -157,11 +221,12 @@ export function ProgramEditor({ id }: { id: string }) {
                     <NumInput label="Recupero (s)" value={it.restSec} decimals={false} onChange={(v) => upItem(di, ii, { restSec: v })} />
                     <NumInput label="Priorità tempo ridotto" hint="1 = più importante" value={it.priority} decimals={false} onChange={(v) => upItem(di, ii, { priority: v })} />
                   </div>
+                  {ex && it.sets ? <p className="small" data-testid="rir-source">{it.rirManual ? <><span className="badge accent">prescritto da te</span> {it.rirTargets.map((t, k) => `S${k + 1}: ${t ? (t.min === t.max ? t.min : t.min + '–' + t.max) : '—'}`).join(' · ')} <button className="linklike" onClick={() => upItem(di, ii, { rirManual: false, rirTargets: suggestedRirTargets(ex.policyClass, it.sets!, 3) })}>Torna ai suggerimenti</button></> : <><span className="badge">suggerito</span> {suggestedRirTargets(ex.policyClass, it.sets, 3).map((t, k) => `S${k + 1}: RIR ${t.min === t.max ? t.min : t.min + '–' + t.max}`).join(' · ')} <span className="muted">(prima volta con la variante: margine più ampio). In seduta il target si adatta ai riscontri che inserisci.</span></>}</p> : null}
                   {it.rirTargets.length > 0 && (
                     <div>
-                      <div className="small"><strong>RIR target per serie</strong></div>
+                      <div className="small"><strong>RIR target per serie</strong> <span className="muted">(cambiarli li rende «prescritti da te»)</span></div>
                       {it.rirTargets.map((t, k) => (
-                        <RirEdit key={k} label={`Serie ${k + 1}`} value={t} onChange={(nt) => upItem(di, ii, { rirTargets: it.rirTargets.map((x, j) => (j === k ? nt : x)) })} />
+                        <RirEdit key={k} label={`Serie ${k + 1}`} value={t} onChange={(nt) => upItem(di, ii, { rirManual: true, rirTargets: it.rirTargets.map((x, j) => (j === k ? nt : x)) })} />
                       ))}
                     </div>
                   )}
@@ -186,7 +251,7 @@ export function ProgramEditor({ id }: { id: string }) {
             );
           })}
           <div className="row wrap mt">
-            <button className="btn sm" onClick={() => upDay(di, { items: [...d.items, { id: uid(), exerciseId: exercises[0]?.id ?? '', sets: 2, repMin: 8, repMax: 12, rirTargets: [null, null], restSec: 180, declaredLoad: '', declaredNotes: '', toConfirm: [], priority: null, sameAs: '' }] })}><Icon.plus /> Esercizio</button>
+            <button className="btn sm" onClick={() => setPick({ di })}><Icon.plus /> Aggiungi esercizi</button>
             <button className="btn sm danger" onClick={() => change({ ...p, days: p.days.filter((_, j) => j !== di) })}>Rimuovi giorno</button>
           </div>
         </section>
@@ -205,6 +270,18 @@ export function ProgramEditor({ id }: { id: string }) {
         <button className="btn danger block" onClick={() => setDel(true)}><Icon.trash /> Elimina scheda</button>
       </div>
 
+      {pick && (
+        <Picker title={pick.ii == null ? `Aggiungi a «${p.days[pick.di].name}»` : 'Cambia esercizio'} multi={pick.ii == null} recentKey="exercise" items={pickItems} filters={EXERCISE_FILTERS}
+          context={pick.ii == null ? 'Tocca uno o più esercizi, poi «Aggiungi». Nulla viene aggiunto finché non scegli.' : 'Cambiare esercizio avvia uno storico separato per la nuova variante.'}
+          onClose={() => setPick(null)}
+          onPick={(picked) => {
+            if (pick.ii != null) { upItem(pick.di, pick.ii, { exerciseId: picked[0].id }); setPick(null); return; }
+            const add = picked.map((x) => newProgramItem(uid(), exMap.get(x.id), x.id));
+            upDay(pick.di, { items: [...p.days[pick.di].items, ...add] });
+            toast({ text: `${add.length} esercizi aggiunti a «${p.days[pick.di].name}» (2 serie di partenza, modificabili). Ricorda di salvare.` });
+            setPick(null);
+          }} />
+      )}
       {policySheet && (
         <Sheet title="Policy RIR proposta" onClose={() => setPolicySheet(false)}>
           <p className="small">Proposta per allenamenti ordinari <strong>dopo una ripresa appropriata</strong>, non per la gestione del dolore. Da confermare, non legge universale:</p>

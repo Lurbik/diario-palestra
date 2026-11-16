@@ -110,6 +110,8 @@ export interface ProgramItem {
   /** Priorità per la modalità "tempo ridotto": confermata dall'utente (1 = massima). null = non confermata */
   priority: number | null;
   sameAs: string;             // es. "Come martedì"
+  /** true = i RIR target sono stati scelti a mano (prescritti); altrimenti l'app li suggerisce */
+  rirManual?: boolean;
   /** Facoltativo: con "ho meno tempo" si toglie per primo; non conta come seduta incompleta. */
   optional?: boolean;
 }
@@ -142,6 +144,7 @@ export interface SessionItem {
   rirTargets: (RirTarget | null)[];
   restSec: number | null;
   skipped: boolean;
+  rirManual?: boolean;
 }
 
 export interface Session {

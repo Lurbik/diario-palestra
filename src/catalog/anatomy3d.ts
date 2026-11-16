@@ -2,6 +2,7 @@
 // e relazioni esplicite esercizio → struttura con ruolo e fonte. Il viewer NON deduce l'anatomia dal nome di un esercizio.
 // Quattro viste distinte: anatomia (questo file), lavoro registrato (serie per gruppo), priorità (preferenza), dolore (segnalazioni).
 import type { Muscle } from '../db/types';
+import { STRUCTURES_MORE, type Focus } from './anatomyAll';
 
 export const MODEL3D = {
   file: 'anatomy3d/full-body-male-mobile.glb',
@@ -24,7 +25,10 @@ export interface Structure3D {
   it: string;
   latin: string;
   synonyms: string[];
-  region: 'spalla' | 'petto' | 'coscia' | 'altro';
+  region: string;
+  /** focus documentabile / solo coinvolto / nessun focus distinguibile */
+  focus?: Focus;
+  source?: keyof typeof ANATOMY_SOURCE_URL;
   action: string;
   /** gruppo del diario a cui sono attribuite le serie; null = non tracciato separatamente */
   group: Muscle | null;
@@ -32,10 +36,11 @@ export interface Structure3D {
 }
 
 const OS = 'OpenStax A&P 2e, 11.5';
-export const ANATOMY_SOURCE_URL = { 'OpenStax A&P 2e, 11.5': 'https://openstax.org/books/anatomy-and-physiology-2e/pages/11-5-muscles-of-the-pectoral-girdle-and-upper-limbs', 'OpenStax A&P 2e, 11.6': 'https://openstax.org/books/anatomy-and-physiology-2e/pages/11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs', 'Chaves et al. 2020': 'https://pubmed.ncbi.nlm.nih.gov/32922646/' } as const;
+const S3 = 'OpenStax A&P 2e, 11.3' as const, S4 = 'OpenStax A&P 2e, 11.4' as const, S5 = 'OpenStax A&P 2e, 11.5' as const, S6 = 'OpenStax A&P 2e, 11.6' as const;
+export const ANATOMY_SOURCE_URL = { 'OpenStax A&P 2e, 11.3': 'https://openstax.org/books/anatomy-and-physiology-2e/pages/11-3-axial-muscles-of-the-head-neck-and-back', 'OpenStax A&P 2e, 11.4': 'https://openstax.org/books/anatomy-and-physiology-2e/pages/11-4-axial-muscles-of-the-abdominal-wall-and-thorax', 'OpenStax A&P 2e, 11.5': 'https://openstax.org/books/anatomy-and-physiology-2e/pages/11-5-muscles-of-the-pectoral-girdle-and-upper-limbs', 'OpenStax A&P 2e, 11.6': 'https://openstax.org/books/anatomy-and-physiology-2e/pages/11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs', 'Chaves et al. 2020': 'https://pubmed.ncbi.nlm.nih.gov/32922646/' } as const;
 
-/** Primo lotto curato: spalla e petto (più la coscia già presente in 2D). */
-export const STRUCTURES: Structure3D[] = [
+/** Spalla e petto (primo lotto, curati a mano). */
+const CURATED: Structure3D[] = [
   { key: 'deltoid_anterior', parent: 'deltoide', it: 'Deltoide, porzione anteriore (clavicolare)', latin: 'm. deltoideus, pars clavicularis', synonyms: ['deltoide anteriore', 'spalla anteriore', 'deltoide clavicolare'], region: 'spalla', group: 'deltoidi_anteriori',
     action: 'Porta il braccio in avanti (flessione) e lo ruota verso l\'interno; partecipa a sollevarlo di lato.' },
   { key: 'deltoid_lateral', parent: 'deltoide', it: 'Deltoide, porzione laterale (acromiale)', latin: 'm. deltoideus, pars acromialis', synonyms: ['deltoide laterale', 'deltoide medio', 'spalla laterale'], region: 'spalla', group: 'deltoidi_laterali',
@@ -53,6 +58,13 @@ export const STRUCTURES: Structure3D[] = [
   { key: 'pectoralis_major_abdominal', parent: 'grande_pettorale', it: 'Grande pettorale, porzione addominale', latin: 'm. pectoralis major, pars abdominalis', synonyms: ['pettorale basso', 'petto basso'], region: 'petto', group: 'petto',
     action: 'Porta in basso il braccio sollevato e lo avvicina al corpo.' },
   { key: 'pectoralis_minor', parent: null, it: 'Piccolo pettorale', latin: 'm. pectoralis minor', synonyms: [], region: 'petto', group: null, deep: true, action: 'Porta la scapola in avanti e in basso e la stabilizza contro il torace.' }
+];
+const CURATED_FOCUS: Record<string, Focus> = { deltoid_anterior: 'focus', deltoid_lateral: 'focus', deltoid_posterior: 'focus', supraspinatus: 'coinvolto', infraspinatus: 'focus', teres_minor: 'coinvolto', subscapularis: 'nessuno', pectoralis_major_clavicular: 'focus', pectoralis_major_sternocostal: 'focus', pectoralis_major_abdominal: 'coinvolto', pectoralis_minor: 'nessuno' };
+
+/** Tutte le strutture del modello con scheda italiana: 11 curate (spalla, petto) + le altre (anatomyAll.ts). */
+export const STRUCTURES: Structure3D[] = [
+  ...CURATED.map((x) => ({ ...x, focus: CURATED_FOCUS[x.key], source: OS as keyof typeof ANATOMY_SOURCE_URL })),
+  ...STRUCTURES_MORE.map((x): Structure3D => ({ key: x.key, parent: null, it: x.it, latin: x.latin, synonyms: x.synonyms ?? [], region: x.region, action: x.action, group: x.group, deep: x.deep, focus: x.focus, source: x.source }))
 ];
 
 /** Nomi italiani dei gruppi del modello, per le strutture non ancora curate (scheda "da scrivere", mai inventata). */
@@ -85,7 +97,42 @@ export const EXERCISE_STRUCTURES: ExerciseStructure[] = [
     ...R(id, [['pectoralis_major_sternocostal', 'principale'], ['deltoid_anterior', 'secondario']]),
     ...R(id, [['pectoralis_major_clavicular', 'possibile_enfasi']], 'Chaves et al. 2020', 'studio limitato')
   ]),
-  ...['cx_dip_petto', 'cx_dip_panca'].flatMap((id) => R(id, [['pectoralis_major_abdominal', 'secondario'], ['deltoid_anterior', 'secondario']]))
+  ...['cx_dip_petto', 'cx_dip_panca'].flatMap((id) => R(id, [['pectoralis_major_abdominal', 'secondario'], ['deltoid_anterior', 'secondario']])),
+  // ---- Schiena (11.3, 11.5)
+  ...['cx_lat_larga', 'cx_lat_stretta', 'cx_trazioni', 'cx_trazioni_assistite', 'cx_pulldown_unil'].flatMap((id) => R(id, [['latissimus_dorsi', 'principale'], ['teres_major', 'secondario'], ['trapezius_lower', 'secondario'], ['rhomboid_major', 'secondario'], ['biceps_brachii_long', 'secondario'], ['brachialis', 'secondario']], S5)),
+  ...['cx_pullover_cavo', 'cx_pullover_man'].flatMap((id) => R(id, [['latissimus_dorsi', 'principale'], ['teres_major', 'secondario'], ['triceps_long', 'secondario']], S5)),
+  // tirate orizzontali: dorsali e retrattori della scapola insieme; con il petto in appoggio meno lavoro di stabilizzazione per gli erettori
+  ...['cx_row_macchina', 'cx_low_row_indip', 'cx_tbar', 'cx_pulley', 'cx_row_cavo_unil', 'cx_rematore_man', 'cx_inverted_row', 'cx_rematore_appoggio'].flatMap((id) => R(id, [['trapezius_middle', 'principale'], ['rhomboid_major', 'principale'], ['latissimus_dorsi', 'principale'], ['deltoid_posterior', 'secondario'], ['biceps_brachii_long', 'secondario']], S5)),
+  ...R('cx_rematore_bil', [['trapezius_middle', 'principale'], ['rhomboid_major', 'principale'], ['latissimus_dorsi', 'principale'], ['deltoid_posterior', 'secondario'], ['longissimus_thoracis', 'secondario'], ['iliocostalis_lumborum', 'secondario']], S5),
+  // high row: tirata dall'alto, NON un isolamento dei romboidi
+  ...R('cx_high_row', [['latissimus_dorsi', 'principale'], ['teres_major', 'secondario'], ['trapezius_lower', 'secondario'], ['rhomboid_major', 'secondario']], S5),
+  ...R('cx_face_pull', [['trapezius_middle', 'secondario']], S5),
+  ...R('cx_scrollate_man', [['trapezius_upper', 'principale'], ['levator_scapulae', 'secondario']], S5),
+  ...R('cx_alzata_y', [['trapezius_lower', 'possibile_enfasi'], ['trapezius_middle', 'secondario'], ['deltoid_lateral', 'secondario']], S5),
+  ...R('cx_back_ext', [['longissimus_thoracis', 'principale'], ['iliocostalis_lumborum', 'principale'], ['gluteus_maximus', 'principale'], ['biceps_femoris_long', 'secondario']], S3),
+  // ---- Anca, coscia (11.6)
+  ...['cx_rdl_bil', 'cx_rdl_man'].flatMap((id) => R(id, [['biceps_femoris_long', 'principale'], ['semitendinosus', 'principale'], ['semimembranosus', 'principale'], ['gluteus_maximus', 'principale'], ['adductor_magnus', 'secondario'], ['longissimus_thoracis', 'secondario'], ['iliocostalis_lumborum', 'secondario']], S6)),
+  ...['cx_squat_bil', 'cx_hack_squat', 'cx_leg_press', 'cx_pendulum', 'cx_goblet_squat', 'cx_belt_squat'].flatMap((id) => R(id, [['vastus_lateralis', 'principale'], ['vastus_medialis', 'principale'], ['vastus_intermedius', 'principale'], ['rectus_femoris', 'secondario'], ['gluteus_maximus', 'secondario'], ['adductor_magnus', 'secondario']], S6)),
+  ...['cx_bulgaro', 'cx_affondi', 'cx_split_squat', 'cx_step_up'].flatMap((id) => R(id, [['vastus_lateralis', 'principale'], ['vastus_medialis', 'principale'], ['gluteus_maximus', 'principale'], ['adductor_magnus', 'secondario'], ['gluteus_medius', 'secondario']], S6)),
+  ...R('cx_leg_ext', [['rectus_femoris', 'principale'], ['vastus_lateralis', 'principale'], ['vastus_medialis', 'principale'], ['vastus_intermedius', 'principale']], S6),
+  ...['cx_leg_curl_seduto', 'cx_leg_curl_sdraiato', 'cx_leg_curl_piedi', 'cx_nordic'].flatMap((id) => R(id, [['biceps_femoris_long', 'principale'], ['biceps_femoris_short', 'principale'], ['semitendinosus', 'principale'], ['semimembranosus', 'principale'], ['gastrocnemius_medial', 'secondario']], S6)),
+  ...['cx_hip_thrust', 'cx_ponte_glutei', 'cx_kickback_cavo'].flatMap((id) => R(id, [['gluteus_maximus', 'principale'], ['biceps_femoris_long', 'secondario'], ['semitendinosus', 'secondario']], S6)),
+  ...R('cx_adductor', [['adductor_longus', 'principale'], ['adductor_magnus', 'principale'], ['adductor_brevis', 'secondario'], ['gracilis', 'secondario'], ['pectineus', 'secondario']], S6),
+  ...R('cx_abductor', [['gluteus_medius', 'principale'], ['gluteus_minimus', 'secondario'], ['tensor_fasciae_latae', 'secondario']], S6),
+  ...['cx_calf_piedi', 'cx_calf_pressa', 'cx_calf_mono_man'].flatMap((id) => R(id, [['gastrocnemius_medial', 'principale'], ['gastrocnemius_lateral', 'principale'], ['soleus', 'secondario']], S6)),
+  ...R('cx_calf_seduto', [['soleus', 'principale'], ['gastrocnemius_medial', 'secondario'], ['gastrocnemius_lateral', 'secondario']], S6),
+  // ---- Braccio e avambraccio (11.5)
+  ...['cx_curl_ez', 'cx_curl_man', 'cx_curl_scott', 'cx_curl_cavo_bayes', 'cx_curl_inclinata'].flatMap((id) => R(id, [['biceps_brachii_long', 'principale'], ['biceps_brachii_short', 'principale'], ['brachialis', 'secondario'], ['brachioradialis_muscle', 'secondario']], S5)),
+  ...['cx_curl_martello', 'cx_curl_inverso'].flatMap((id) => R(id, [['brachialis', 'principale'], ['brachioradialis_muscle', 'principale'], ['biceps_brachii_long', 'secondario']], S5)),
+  ...['cx_pushdown', 'cx_triceps_machine', 'cx_dip_panca', 'cx_jm_press_mp'].flatMap((id) => R(id, [['triceps_lateral', 'principale'], ['triceps_medial', 'principale'], ['triceps_long', 'secondario']], S5)),
+  ...['cx_estensione_cavo_testa', 'cx_french_ez'].flatMap((id) => R(id, [['triceps_long', 'principale'], ['triceps_lateral', 'secondario'], ['triceps_medial', 'secondario']], S5)),
+  ...R('cx_curl_polso', [['flexor_carpi_radialis', 'principale'], ['humeral_head_of_flexor_carpi_ulnaris', 'principale'], ['humero_ulnar_head_of_flexor_digitorum_superficialis', 'secondario']], S5),
+  ...R('cx_farmer_walk', [['humero_ulnar_head_of_flexor_digitorum_superficialis', 'principale'], ['flexor_digitorum_profundus', 'principale'], ['trapezius_upper', 'secondario'], ['quadratus_lumborum', 'secondario']], S5),
+  // ---- Tronco (11.4)
+  ...['cx_crunch_cavo', 'cx_crunch_allungamento', 'cx_leg_raise'].flatMap((id) => R(id, [['rectus_abdominis', 'principale'], ['external_oblique', 'secondario']], S4)),
+  ...['cx_plank', 'cx_dead_bug'].flatMap((id) => R(id, [['rectus_abdominis', 'secondario'], ['transversus_abdominis', 'secondario'], ['external_oblique', 'secondario']], S4)),
+  ...R('cx_side_plank', [['external_oblique', 'principale'], ['internal_oblique', 'secondario'], ['quadratus_lumborum', 'secondario'], ['gluteus_medius', 'secondario']], S4),
+  ...R('cx_pallof', [['external_oblique', 'principale'], ['internal_oblique', 'secondario'], ['transversus_abdominis', 'secondario']], S4)
 ];
 
 export const ROLE_LABEL: Record<Role, string> = { principale: 'principale', secondario: 'coinvolto', possibile_enfasi: 'possibile enfasi' };

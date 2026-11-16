@@ -16,9 +16,9 @@ describe('cataloghi integrati dal pacchetto editoriale', () => {
   it('conteggi effettivi, riferimenti risolti, nessun doppione', async () => {
     const c = await loadCatalog();
     expect(c.foods.length).toBe(132);
-    expect(c.exercises.length).toBe(85);
+    expect(c.exercises.length).toBe(93);
     expect(c.recipes.length).toBe(59);              // 48 + 12 nuove − 1 doppione hummus unito
-    expect(c.templates.length).toBe(11);
+    expect(c.templates.length).toBe(20);
     expect(c.unresolved).toEqual([]);
     expect(new Set(c.foods.map((f) => f.id)).size).toBe(c.foods.length);
     expect(new Set(c.exercises.map((e) => e.id)).size).toBe(c.exercises.length);
@@ -51,7 +51,10 @@ describe('cataloghi integrati dal pacchetto editoriale', () => {
       const r = rankTemplates({ days, equipment: 'palestra', experience: 'intermedio', minutes: 60 });
       expect(r[0].days).toBe(days);
     }
-    expect(rankTemplates({ days: 2, equipment: 'casa_manubri', experience: 'principiante', minutes: 45 })[0].id).toBe('tpl2_casa2');
+    expect(rankTemplates({ days: 2, equipment: 'casa_manubri', experience: 'principiante', minutes: 60 })[0].id).toBe('tpl2_casa2');
+    // con 45 minuti la prima proposta entra davvero nel tempo (durata calcolata)
+    const short = rankTemplates({ days: 2, equipment: 'casa_manubri', experience: 'principiante', minutes: 45 })[0];
+    expect(short.minutes).toBeLessThanOrEqual(45);
     for (const t of templatesV2()) for (const d of t.days) for (const i of d.items) expect(i.declaredLoad).toBe('');
   });
   it('esercizi a tempo o distanza: unità registrata e campi editoriali', () => {
@@ -77,7 +80,7 @@ describe('migrazione: archivio della versione precedente con preferiti e voci mo
     await kvSet('catalogVersion', 4); // con la vecchia logica (massimo) l'aggiornamento sarebbe stato saltato
     await bootstrap();
     expect((await db.programs.get('tpl2_fb3'))!.name).not.toBe('vecchio nome');
-    expect(await kvGet('catalogRelease', '')).toMatch(/^e\d+-r\d+-f\d+-t3$/);
+    expect(await kvGet('catalogRelease', '')).toMatch(/^e\d+-r\d+-f\d+-t[3-9]$/);
   });
   it('preferiti, voci modificate e doppioni ritirati: nulla perso, nulla sovrascritto', async () => {
     await bootstrap();

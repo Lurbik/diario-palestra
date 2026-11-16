@@ -36,6 +36,7 @@ describe('atlante 3D', () => {
       expect(['principale', 'secondario', 'possibile_enfasi']).toContain(r.role);
     }
     // l'enfasi regionale della panca inclinata è marcata come evidenza limitata
-    for (const r of EXERCISE_STRUCTURES.filter((x) => x.role === 'possibile_enfasi')) expect(r.quality).toBe('studio limitato');
+    for (const r of EXERCISE_STRUCTURES.filter((x) => x.role === 'possibile_enfasi')) expect(['studio limitato', 'anatomia funzionale']).toContain(r.quality);
+    for (const r of EXERCISE_STRUCTURES.filter((x) => x.role === 'possibile_enfasi' && x.exerciseId.includes('incl'))) expect(r.quality).toBe('studio limitato');
   });
 });

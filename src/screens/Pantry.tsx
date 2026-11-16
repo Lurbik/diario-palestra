@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { Picker, type PickItem } from '../ui/Picker';
+import { rulesFrom, isFoodAllowed } from '../lib/recipes';
+import { STATE_LABEL } from './FoodEditor';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import type { Food, MealSlot, StockLot } from '../db/types';
-import { Field, Icon, NumInput, Sheet, Tabs, useToast } from '../ui/kit';
+import { Field, Icon, NumInput, Sheet, Tabs, useToast, useSettings } from '../ui/kit';
 import { MEAL_LABEL, MEAL_ORDER } from '../db/settings';
 import { purchase, eatBatchPortion, undoTx } from '../lib/inventory';
 import { shoppingNeeds } from '../lib/recipes';
@@ -106,13 +109,22 @@ function EditLot({ lot, onDone }: { lot: StockLot; onDone: () => void }) {
 }
 
 export function FoodPicker({ onPick, onClose }: { onPick: (f: Food) => void; onClose: () => void }) {
-  const foods = useLiveQuery(() => db.foods.orderBy('name').toArray(), []) ?? [];
-  const [q, setQ] = useState('');
+  const foods = useLiveQuery(() => db.foods.toArray(), []) ?? [];
+  const settings = useSettings();
+  const rules = rulesFrom(settings);
+  const items: PickItem[] = foods.filter((f) => !f.archived).map((f) => ({
+    id: f.id, kind: 'food', name: f.name, aliases: f.synonyms ?? [], extra: [f.brand, f.originalName ?? '', f.category ?? ''].join(' '),
+    subtitle: [STATE_LABEL[f.state], f.brand || (f.source === 'database' ? 'generico' : null), isFoodAllowed(f, rules) ? null : 'escluso dalle tue preferenze/allergie'].filter(Boolean).join(' · '),
+    favorite: !!f.favorite, facets: { state: f.state, kind: f.brand || f.source === 'label' ? 'marca' : 'generico', ok: isFoodAllowed(f, rules) ? 'si' : 'no' }
+  }));
+  const byId = new Map(foods.map((f) => [f.id, f]));
   return (
-    <Sheet title="Scegli alimento" onClose={onClose}>
-      <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca…" aria-label="Cerca alimento" />
-      <ul className="list mt">{foods.filter((f) => f.name.toLowerCase().includes(q.toLowerCase())).map((f) => <li key={f.id}><button className="listbtn" onClick={() => onPick(f)}>{f.name}<Icon.right /></button></li>)}</ul>
-    </Sheet>
+    <Picker title="Scegli alimento" recentKey="food" items={items} onClose={onClose} onPick={(x) => onPick(byId.get(x[0].id)!)}
+      filters={[
+        { key: 'state', label: 'Stato', options: [{ value: 'raw', label: 'Crudo' }, { value: 'cooked', label: 'Cotto' }, { value: 'drained', label: 'Sgocciolato' }, { value: 'as_sold', label: 'Come venduto' }] },
+        { key: 'kind', label: 'Tipo', options: [{ value: 'generico', label: 'Generico' }, { value: 'marca', label: 'Di marca / etichetta' }] },
+        { key: 'ok', label: 'Esclusioni', options: [{ value: 'si', label: 'Solo compatibili' }] }
+      ]} />
   );
 }
 

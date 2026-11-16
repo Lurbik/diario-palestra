@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { GlobalSearch } from './GlobalSearch';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, kvSet } from '../db/db';
 import { Chip, Icon, go, useNow, useSettings, useToast } from '../ui/kit';
@@ -22,6 +23,7 @@ import type { MealSlot, Recipe } from '../db/types';
 const ALT_LABELS = ['Proposta', 'Alternativa più comoda', 'Alternativa con quello che hai'];
 
 export function TodayScreen({ offline }: { offline: { ready: boolean; detail: string } | null }) {
+  const [searchOpen, setSearchOpen] = useState(false);
   const settings = useSettings();
   const toast = useToast();
   const now = useNow(30000);
@@ -127,7 +129,8 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
   return (
     <main className="main">
       <div className="eyebrow">{formatDateIt(today, true)}</div>
-      <h1>Oggi</h1>
+      <div className="row between"><h1>Oggi</h1><button className="btn sm" aria-label="Cerca esercizi, schede, muscoli, alimenti, ricette" data-testid="global-search" onClick={() => setSearchOpen(true)}>Cerca</button></div>
+      {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} />}
 
       {!settings.onboardingDone && (
         <div className="hero accent">

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { kvSet } from '../db/db';
 import { db } from '../db/db';
 import type { PainEpisode, Program, SetEntry } from '../db/types';
 import { Check, Chip, Field, Icon, NumInput, Sheet, go, useSettings, useToast } from '../ui/kit';
@@ -10,7 +11,7 @@ import { CoachCard } from './Coach';
 import { CatalogScreen, ExerciseEditor, MachineEditor } from './Catalog';
 import { ExercisePage } from './ExercisePage';
 import { estimateItemMin, sessionTimes, startSession, discardSession } from '../lib/workout';
-import { dateKey, formatDateIt, formatDuration, weekdayOf, WEEKDAYS } from '../lib/dates';
+import { dateKey, formatDateIt, formatDuration, weekdayOf, weekStart, WEEKDAYS } from '../lib/dates';
 import { describeSet } from '../ui/labels';
 import { painSafety } from '../lib/safety';
 import { uid } from '../lib/id';
@@ -47,24 +48,27 @@ function WorkoutHome() {
   const [reduced, setReduced] = useState(false);
   const [limit, setLimit] = useState<number | null>(null);
   const [confirmPain, setConfirmPain] = useState(false);
-  const timeLimit = limit ?? settings.dailyTimeLimitMin;
+  // "Questa settimana ho meno tempo": vale solo per la settimana corrente, la scheda non viene riscritta
+  const weekKey = `lessTime:${weekStart(today)}`;
+  const weekLimit = (useLiveQuery(() => db.kv.get(weekKey), [weekKey])?.value as number | null | undefined) ?? null;
+  const timeLimit = limit ?? weekLimit ?? settings.dailyTimeLimitMin;
 
   const plan = useMemo(() => {
     if (!day) return { skip: [] as string[], est: 0, canReduce: false };
     const est = day.items.reduce((a, it) => a + estimateItemMin(it), 0);
     const canReduce = settings.reducedTimePrioritiesConfirmed && day.items.every((it) => it.priority != null);
-    if (!reduced || !canReduce || timeLimit == null) return { skip: [], est, canReduce };
+    if (!(reduced || !!weekLimit) || !canReduce || timeLimit == null) return { skip: [], est, canReduce };
     // i facoltativi si tolgono per primi
     const byPrio = [...day.items].sort((a, b) => Number(!!a.optional) - Number(!!b.optional) || (a.priority ?? 99) - (b.priority ?? 99));
     let acc = 0; const keep = new Set<string>();
     for (const it of byPrio) { const m = estimateItemMin(it); if (acc + m <= timeLimit || keep.size === 0) { keep.add(it.id); acc += m; } }
     return { skip: day.items.filter((it) => !keep.has(it.id)).map((it) => it.id), est, canReduce };
-  }, [day, reduced, timeLimit, settings.reducedTimePrioritiesConfirmed]);
+  }, [day, reduced, weekLimit, timeLimit, settings.reducedTimePrioritiesConfirmed]);
 
   const start = async (free = false) => {
     await startSession({
       program: free ? null : program, dayId: free ? null : day?.id ?? null, title: free ? 'Seduta libera' : undefined,
-      reducedTime: reduced && plan.canReduce, timeLimitMin: timeLimit, skipItemIds: plan.skip
+      reducedTime: (reduced || !!weekLimit) && plan.canReduce, timeLimitMin: timeLimit, skipItemIds: plan.skip
     });
     go('allenamento/seduta');
   };
@@ -107,7 +111,12 @@ function WorkoutHome() {
                   </ul>
                   <p className="small muted">Stima ~{Math.round(plan.est)} min (recuperi inclusi, non compressi){timeLimit ? ` · limite ${timeLimit} min` : ''}.</p>
                   <details>
-                    <summary>Tempo disponibile oggi</summary>
+                    <summary>Tempo disponibile{weekLimit ? ` · questa settimana ${weekLimit} min` : ''}</summary>
+                    <div className="chips" aria-label="Questa settimana ho meno tempo" data-testid="week-less-time">
+                      <span className="small muted">Questa settimana ho meno tempo:</span>
+                      {[30, 45, 60].map((m) => <Chip key={m} on={weekLimit === m} onClick={() => kvSet(weekKey, weekLimit === m ? null : m)}>{m} min</Chip>)}
+                    </div>
+                    <p className="small muted">Vale fino a domenica e salta prima gli esercizi facoltativi o a priorità più bassa. La scheda per le settimane successive non cambia.</p>
                     <NumInput label="Limite di oggi (minuti)" value={timeLimit} onChange={setLimit} decimals={false} />
                     <div className="mt">
                       <Chip on={reduced} onClick={() => setReduced(!reduced)}>Modalità tempo ridotto</Chip>
@@ -202,7 +211,7 @@ function SessionDetail({ id }: { id: string }) {
             {list.map((x) => (
               <div className="setline" key={x.id}>
                 <div className="small"><strong>{x.kind === 'warmup' ? 'Risc.' : '#' + x.order}</strong> {describeSet(x)}{x.restBeforeSec != null && <span className="muted"> · {formatDuration(x.restBeforeSec * 1000)} dalla serie prima</span>}{x.pain && <span className="badge danger"> dolore</span>}{x.notes && <><br /><span className="muted">{x.notes}</span></>}</div>
-                <button className="iconbtn" aria-label="Modifica serie" onClick={() => setEdit(x)}><Icon.edit /></button>
+                <button className="btn sm" aria-label="Correggi questa serie registrata" onClick={() => setEdit(x)}><Icon.edit /> Correggi</button>
               </div>
             ))}
           </div>

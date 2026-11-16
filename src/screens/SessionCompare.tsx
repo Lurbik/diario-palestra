@@ -6,6 +6,7 @@
 import type { Exercise, Machine, SessionItem, SetEntry } from '../db/types';
 import type { Exposure } from '../lib/progression';
 import type { FormState } from './Session';
+import type { SetTarget } from '../lib/setTarget';
 import { Check, Chip, Field, Icon, NumInput } from '../ui/kit';
 import { CONVENTION_LABEL, MEASURE_LABEL, MEASURE_UNIT, totalLoadNote } from '../ui/labels';
 import { formatDateIt } from '../lib/dates';
@@ -21,9 +22,11 @@ function cellText(load: number | null, reps: number | null, part: number, rir: n
   };
 }
 
-export function CompareEntry({ form, setForm, ex, machine, loadStep, item, prev, itemSets, field, setField, onEdit }: {
+export function CompareEntry({ form, setForm, ex, machine, loadStep, item, prev, itemSets, field, setField, onEdit, target: tgt }: {
   form: FormState; setForm: (f: FormState) => void; ex: Exercise; machine: Machine | null | undefined; loadStep: number; item: SessionItem;
   prev: Exposure | null | undefined; itemSets: SetEntry[]; field: CompareField; setField: (f: CompareField) => void; onEdit: (s: SetEntry) => void;
+  /** target calcolato da setTarget (frase, fonte, motivo) */
+  target?: SetTarget | null;
 }) {
   const up = (p: Partial<FormState>) => setForm({ ...form, ...p });
   // Unità registrata per serie: ripetizioni, secondi (plank) o metri (camminate)
@@ -69,9 +72,16 @@ export function CompareEntry({ form, setForm, ex, machine, loadStep, item, prev,
     <>
       <section className="card flat cmp-card" aria-label="Confronto con l'ultima volta">
         <div className="row between">
-          <span className="small muted">Obiettivo <strong className="num">{target}</strong>{rirT ? ` · RIR ${rirT.min === rirT.max ? rirT.min : `${rirT.min}–${rirT.max}`}` : ''}</span>
+          {tgt && form.kind === 'working' ? (
+            <div className="set-target" data-testid="set-target">
+              <strong className="small">{tgt.sentence}</strong>
+              <span className={`badge ${tgt.source === 'prescritto' ? 'accent' : ''}`} title={tgt.why.join(' ')}>{tgt.source === 'prescritto' ? 'prescritto da te' : tgt.source === 'suggerito' ? 'suggerito' : ''}</span>
+              <details className="small"><summary>Perché</summary><p className="mb0">{tgt.why.join(' ')}</p><p className="muted mb0">Dati usati: {tgt.dataUsed.join('; ')}. Affidabilità {tgt.reliability}. Il target non compila il RIR che inserirai tu.{tgt.rir ? ' RIR ' + tgt.rir.min + ' = potresti fare ancora circa ' + tgt.rir.min + ' ripetizioni complete con la tecnica concordata.' : ''}</p></details>
+            </div>
+          ) : <span className="small muted">Obiettivo <strong className="num">{target}</strong>{rirT ? ` · RIR ${rirT.min === rirT.max ? rirT.min : `${rirT.min}–${rirT.max}`}` : ''}</span>}
           {form.loadPrefilledFrom && <span className="badge accent small" title={`Carico precompilato: ${form.loadPrefilledFrom}`}>carico precompilato</span>}
         </div>
+        {tgt?.live && form.kind === 'working' && <p className="small live-advice" data-testid="set-live">{tgt.live}</p>}
         <table className="cmp num">
           <thead><tr><th scope="col">Serie</th><th scope="col">{prevLabel}</th><th scope="col">Oggi</th></tr></thead>
           <tbody>
