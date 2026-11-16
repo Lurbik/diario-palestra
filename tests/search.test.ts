@@ -31,8 +31,8 @@ describe('ricerca', () => {
     expect(score({ name: 'Pulley' }, 'pulley')).toBeGreaterThan(score({ name: 'Pullover al cavo' }, 'pulley'));
   });
   it('alias privati (voci dell\'utente) trovati come gli altri', () => {
-    const mine = [...ex, { id: 'u1', name: 'Rematore mio', aliases: ['ciuf ciuf'], extra: '' }];
-    expect(search(mine, 'ciuf ciuf')[0].id).toBe('u1');
+    const mine = [...ex, { id: 'u1', name: 'Rematore mio', aliases: ['alias di prova'], extra: '' }];
+    expect(search(mine, 'alias di prova')[0].id).toBe('u1');
   });
   it('macchine simili non vengono scambiate: "hack squat" non restituisce per primo un\'altra macchina', () => {
     expect(top('hack squat', 1)).toEqual(['cx_hack_squat']);

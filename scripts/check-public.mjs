@@ -11,7 +11,8 @@ const terms = readFileSync(LIST, 'utf8').split(/\r?\n/).map((t) => t.trim()).fil
 const files = [];
 const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) walk(p); else files.push(p); } };
 if (existsSync('dist')) walk('dist');
-const tracked = execSync('git ls-files').toString().split('\n').filter(Boolean);
+// tracciati + nuovi non ancora aggiunti (rispettando .gitignore): un file nuovo va controllato prima del commit
+const tracked = execSync('git ls-files --cached --others --exclude-standard').toString().split('\n').filter(Boolean);
 let hits = 0;
 for (const f of [...files, ...tracked]) {
   let txt; try { txt = readFileSync(f, 'utf8'); } catch { continue; }

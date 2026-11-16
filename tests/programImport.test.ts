@@ -10,7 +10,7 @@ const it2 = (id: string, ex: string) => ({ id, exerciseId: ex, sets: 2, repMin: 
 const FILE = JSON.stringify({
   format: 'diario-backup', tables: {
     programs: [{ id: 'imp_rot', name: 'Rotazione importata', kind: 'custom', isActive: true, notes: '', createdAt: 1, days: [{ id: 'imp_d1', name: 'Torso', weekday: null, items: [it2('i1', 'cx_rdl_man'), it2('i2', 'u_rematore_mio')] }] }],
-    exercises: [{ id: 'u_rematore_mio', name: 'Rematore mio', aliases: ['ciuf ciuf'], variant: '', machineId: null, equipment: 'Macchina', primaryMuscles: ['schiena_alta'], secondaryMuscles: [], loadConvention: 'machine_stack', unilateral: false, romType: 'full', configVersion: 1, configNote: '', techNotes: '', toConfirm: [], policyClass: 'compound', origin: 'user' }],
+    exercises: [{ id: 'u_rematore_mio', name: 'Rematore mio', aliases: ['alias di prova'], variant: '', machineId: null, equipment: 'Macchina', primaryMuscles: ['schiena_alta'], secondaryMuscles: [], loadConvention: 'machine_stack', unilateral: false, romType: 'full', configVersion: 1, configNote: '', techNotes: '', toConfirm: [], policyClass: 'compound', origin: 'user' }],
     sessions: [{ id: 's1' }], sets: [{ id: 'x' }], weights: [{ id: 'w' }]
   }
 });
