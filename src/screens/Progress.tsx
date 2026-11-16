@@ -15,10 +15,11 @@ import { MUSCLE_LABEL } from '../ui/labels';
 import { WeightSheet } from './WeightSheet';
 import { patchSettings } from '../db/bootstrap';
 import { BodyMapTab } from './BodyMap';
+import { AtlasScreen } from './Atlas';
 import { loadWriteFor } from '../lib/loadDecision';
 
 export function ProgressScreen({ route }: { route: string[] }) {
-  const sub = (route[1] as 'peso' | 'allenamento' | 'muscoli' | 'recupero') || 'peso';
+  const sub = (route[1] as 'peso' | 'allenamento' | 'muscoli' | 'recupero' | 'atlante') || 'peso';
   return (
     <main className="main">
       <h1>Progressi</h1>
@@ -26,6 +27,7 @@ export function ProgressScreen({ route }: { route: string[] }) {
       {sub === 'peso' && <WeightTab />}
       {sub === 'allenamento' && <TrainingTab />}
       {sub === 'muscoli' && <BodyMapTab />}
+      {sub === 'atlante' && <AtlasScreen />}
       {sub === 'recupero' && <RecoveryTab />}
     </main>
   );

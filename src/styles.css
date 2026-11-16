@@ -283,3 +283,18 @@ table.cmp tr.cur td.today { outline: 3px solid var(--accent-bg); outline-offset:
 
 .coach-item { border-top: 1px solid var(--line, #e5e1d8); padding-top: 10px; margin-top: 10px; }
 .coach-item:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+
+/* Atlante anatomico */
+.atlas { padding: 6px; touch-action: pan-y pinch-zoom; }
+.atlas svg { width: 100%; height: auto; max-height: 70vh; display: block; }
+.atlas .atlas-s { cursor: pointer; }
+.atlas .atlas-sel { stroke: #1d4ed8 !important; stroke-width: 1.2px !important; filter: drop-shadow(0 0 1.5px #1d4ed8); }
+.atlas-work .atlas-s.atlas-w0, .sw.atlas-w0 { fill: #ddd6cb !important; }
+.atlas-work .atlas-s.atlas-w1, .sw.atlas-w1 { fill: #f3c9a3 !important; }
+.atlas-work .atlas-s.atlas-w2, .sw.atlas-w2 { fill: #e07a4f !important; }
+.atlas-work .atlas-s.atlas-w3, .sw.atlas-w3 { fill: #9c3416 !important; }
+.atlas-work .atlas-s.atlas-ind { fill: url(#atlas-hatch) !important; }
+.sw.atlas-ind { background: repeating-linear-gradient(45deg, #ddd6cb 0 3px, #e07a4f 3px 5px); }
+.atlas-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 12px; }
+.atlas-legend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; border: 1px solid #0003; }
+.sw.atlas-w0 { background: #ddd6cb; } .sw.atlas-w1 { background: #f3c9a3; } .sw.atlas-w2 { background: #e07a4f; } .sw.atlas-w3 { background: #9c3416; }

@@ -40,6 +40,7 @@ export function BodyMapTab() {
 
   return (
     <>
+      <a className="btn block" href="#/progressi/atlante" style={{ marginBottom: 12 }}>Atlante anatomico (anteprima: spalla, petto, coscia)</a>
       <Tabs value={view} onChange={(v) => { setView(v); setSel(null); }} items={[['lavoro', 'Lavoro registrato'], ['piano', 'Piano'], ['sensazioni', 'Sensazioni']]} />
       {view === 'lavoro' && <div className="chips"><Chip on={days === 7} onClick={() => setDays(7)}>7 giorni</Chip><Chip on={days === 28} onClick={() => setDays(28)}>28 giorni</Chip></div>}
       <div className="card mt">
