@@ -5,7 +5,7 @@
 // Il colore non stima lo sviluppo muscolare: rappresenta solo serie registrate, su scala fissa e con numeri.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db/db';
+import { db, kvSet } from '../db/db';
 import type { Muscle } from '../db/types';
 import { Chip, useSettings } from '../ui/kit';
 import { ANATOMY, ANATOMY_SOURCES, ATLAS_IMAGE_CREDIT, ATLAS_PENDING, type AnatomyStructure } from '../catalog/anatomy';
@@ -36,6 +36,7 @@ export function AtlasScreen() {
   const sessions = useLiveQuery(() => db.sessions.toArray(), []) ?? [];
   const exercises = useLiveQuery(() => db.exercises.toArray(), []) ?? [];
   const exMap = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises]);
+  const focus = (useLiveQuery(() => db.kv.get('muscleFocus'), [])?.value as Muscle[] | undefined) ?? [];
   const work = useMemo(() => workByMuscle(sets, sessions, exMap, addDays(today, -(days - 1))), [sets, sessions, exMap, today, days]);
   const direct = (s: AnatomyStructure) => groupsOf(s).reduce((a, g) => a + (work.get(g)?.direct ?? 0), 0);
   const indirect = (s: AnatomyStructure) => groupsOf(s).reduce((a, g) => a + (work.get(g)?.indirect ?? 0), 0);
@@ -110,6 +111,10 @@ export function AtlasScreen() {
         <section className="card" data-testid="atlas-card" aria-live="polite">
           <div className="row between"><h3 className="mt0">{s.name}</h3><button className="btn sm ghost" onClick={() => setSel(null)}>Chiudi</button></div>
           <p className="small muted mt0"><em>{s.latin}</em>{s.onMap ? '' : ' · muscolo profondo: solo scheda, nessuna zona disegnata'}</p>
+          {groupsOf(s).length > 0 && (() => { const on = groupsOf(s).every((g) => focus.includes(g)); return (
+            <button className={`btn sm${on ? ' primary' : ''}`} data-testid="atlas-focus" onClick={() => kvSet('muscleFocus', on ? focus.filter((g) => !groupsOf(s).includes(g)) : [...new Set([...focus, ...groupsOf(s)])])}>
+              {on ? 'È una mia priorità · togli' : 'Voglio dare priorità a questa zona'}
+            </button>); })()}
           <div className="seg" role="tablist" aria-label="Sezioni">
             <button role="tab" aria-pressed={tab === 'what'} onClick={() => setTab('what')}>Cosa fa</button>
             <button role="tab" aria-pressed={tab === 'how'} onClick={() => setTab('how')}>Come allenarlo</button>

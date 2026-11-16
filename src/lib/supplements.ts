@@ -3,7 +3,12 @@
 // Ogni esito dice quali dati ha usato e cosa manca; nessun dato inventato (valori ignoti restano ignoti).
 import { SUPPLEMENTS, type SupplementInfo } from '../catalog/supplements';
 
-export type SupplementStatus = 'consider' | 'food_first' | 'test_first' | 'not_needed' | 'not_recommended' | 'ask_doctor' | 'in_use';
+/**
+ * Tre assi distinti, mai sovrascritti l'uno dall'altro:
+ *   status/pertinenza (informazione) · inUse (fatto riferito dall'utente) · caution (prioritaria).
+ * "Lo uso già" non è un consenso a consigli di dose e non nasconde una cautela.
+ */
+export type SupplementStatus = 'consider' | 'need_info' | 'food_first' | 'test_first' | 'not_needed' | 'not_recommended' | 'ask_doctor';
 
 export interface HealthFlags {
   pregnant?: boolean; kidney?: boolean; heart?: boolean; meds?: boolean; under18?: boolean;
@@ -30,9 +35,17 @@ export interface SupplementContext {
   noDairy: boolean;
   /** integratori segnati come "lo sto usando" */
   using: string[];
+  /** giorni di allenamento dichiarati nel profilo (null = non indicato, che non vale "zero") */
+  declaredDays?: number | null;
 }
 
-export interface SupplementAdvice { info: SupplementInfo; status: SupplementStatus; title: string; reasons: string[]; missing: string[] }
+export interface SupplementAdvice {
+  info: SupplementInfo; status: SupplementStatus; title: string; reasons: string[]; missing: string[];
+  /** l'utente ha segnato che lo usa (fatto riferito) */
+  inUse: boolean;
+  /** cautela prioritaria da mostrare per prima, anche se lo usa già; null se nessuna segnalata */
+  caution: string | null;
+}
 
 const fmt = (n: number, d = 0) => n.toFixed(d).replace('.', ',');
 const anyRisk = (h: HealthFlags) => !!(h.pregnant || h.kidney || h.heart || h.meds || h.under18);
@@ -48,8 +61,11 @@ export function supplementAdvice(c: SupplementContext): SupplementAdvice[] {
     switch (info.id) {
       case 'creatina': {
         if (c.health.kidney || c.health.pregnant || c.health.under18) { status = 'ask_doctor'; title = 'Parlane prima con il medico'; reasons.push('Hai indicato una condizione per cui la creatina va valutata dal medico.'); break; }
-        if (c.sessions28 >= 6) { status = 'consider'; title = 'Da considerare'; reasons.push(`Ti sei allenato ${c.sessions28} volte negli ultimi 28 giorni: per chi si allena con i pesi è l'integratore con le prove più solide.`); reasons.push('Nelle prime 3–4 settimane il peso può salire per acqua: l\'app non proporrà modifiche alle calorie in quel periodo se segni la data di inizio.'); }
-        else { status = 'not_needed'; title = 'Per ora non serve'; reasons.push(`Solo ${c.sessions28} sedute registrate negli ultimi 28 giorni: il beneficio dipende dall'allenamento costante.`); }
+        const water = 'Nelle prime 3–4 settimane il peso può salire per acqua: con la data di inizio segnata, l\'app sospende le proposte sulle calorie in quel periodo (regola di prodotto, non un dato scientifico).';
+        if (c.sessions28 >= 6) { status = 'consider'; title = 'Da considerare'; reasons.push(`Ti sei allenato ${c.sessions28} volte negli ultimi 28 giorni: per chi si allena con i pesi è l'integratore con le prove più solide.`); reasons.push(water); }
+        else if (c.sessions28 === 0 && !c.declaredDays) { status = 'need_info'; title = 'Non so ancora quanto ti alleni: vuoi indicarlo?'; reasons.push('Non ci sono sedute registrate e nel profilo non hai indicato quanti giorni ti alleni. Le informazioni generali sono qui sotto già da ora.'); missing.push('giorni di allenamento a settimana (profilo) o alcune sedute registrate'); }
+        else if ((c.declaredDays ?? 0) >= 2) { status = 'consider'; title = 'Da considerare'; reasons.push(`Hai indicato ${c.declaredDays} giorni di allenamento a settimana${c.sessions28 ? ` (${c.sessions28} sedute registrate negli ultimi 28 giorni)` : ''}: per chi si allena con i pesi è l'integratore con le prove più solide.`); reasons.push(water); }
+        else { status = 'not_needed'; title = 'Per ora poco rilevante'; reasons.push(`${c.sessions28} sedute registrate negli ultimi 28 giorni: il beneficio dipende dall'allenamento costante.`); }
         if (c.health.meds) reasons.push('Assumi farmaci: chiedi conferma a medico o farmacista.');
         break;
       }
@@ -119,12 +135,19 @@ export function supplementAdvice(c: SupplementContext): SupplementAdvice[] {
         reasons.push('Nessuna prova solida di benefici in persone sane; rischio di sostanze non dichiarate.');
       }
     }
-    if (c.using.includes(info.id) && status !== 'ask_doctor') { reasons.unshift('Hai segnato che lo stai usando.'); if (status === 'consider') status = 'in_use'; }
+    const inUse = c.using.includes(info.id);
     if (c.health.tested && status !== 'not_recommended') reasons.push('Sei sottoposto a controlli antidoping: usa solo prodotti con certificazione di lotto (es. Informed Sport). Una parte degli integratori analizzati contiene sostanze non dichiarate.');
-    if (anyRisk(c.health) && status === 'consider') { status = 'ask_doctor'; title = 'Parlane prima con il medico'; reasons.push('Hai indicato condizioni o farmaci: prima di iniziare chiedi a medico o farmacista.'); }
-    out.push({ info, status, title, reasons, missing });
+    // Cautela: hai indicato condizioni o farmaci. Vale anche (soprattutto) se lo usi già.
+    let caution: string | null = status === 'ask_doctor' ? reasons[0] ?? 'Parlane con medico o farmacista.' : null;
+    if (anyRisk(c.health) && (status === 'consider' || status === 'need_info' || inUse)) {
+      caution = inUse ? 'Lo usi già e hai indicato condizioni o farmaci: parlane con medico o farmacista. L\'app non propone dosi personalizzate.' : 'Hai indicato condizioni o farmaci: prima di iniziare chiedi a medico o farmacista.';
+      status = 'ask_doctor'; title = 'Parlane prima con il medico';
+    }
+    if (inUse) reasons.unshift('Hai segnato che lo stai usando: è un dato che hai riferito, non un consiglio dell\'app.');
+    out.push({ info, status, title, reasons, missing, inUse, caution });
   }
-  const order: SupplementStatus[] = ['in_use', 'consider', 'ask_doctor', 'food_first', 'test_first', 'not_needed', 'not_recommended'];
+  // Le cautele vengono sempre prima; l'uso dichiarato non cambia la posizione.
+  const order: SupplementStatus[] = ['ask_doctor', 'consider', 'need_info', 'food_first', 'test_first', 'not_needed', 'not_recommended'];
   return out.sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
 }
 

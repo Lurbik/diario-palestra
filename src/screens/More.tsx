@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db/db';
+import { db, kvSet } from '../db/db';
+import { MUSCLE_LABEL } from '../ui/labels';
 import type { MealSlot, PlanEntry } from '../db/types';
 import { Check, Chip, Field, Icon, NumInput, Sheet, useSettings, useToast } from '../ui/kit';
 import { DAYTYPE_LABEL, GOAL_LABEL, MEAL_LABEL, type DayType, type Settings } from '../db/settings';
@@ -272,6 +273,7 @@ function SettingsScreen() {
             <Chip on={s.profile.coolerBag === 'no'} onClick={() => set({ profile: { ...s.profile, coolerBag: s.profile.coolerBag === 'no' ? null : 'no' } })}>Niente borsa termica</Chip>
           </div>
         </div>
+        <FocusSummary />
         <AgendaEditor />
         <NumInput label="Target proteico (g/die)" value={s.proteinTargetG} onChange={(v) => set({ proteinTargetG: v })} decimals={false} />
       </section>
@@ -477,5 +479,17 @@ function AgendaEditor() {
         <NumInput label="per minuti" value={ag.prepMin} onChange={(v) => up({ prepMin: v })} decimals={false} />
       </div>
     </details>
+  );
+}
+
+/** Priorità muscolari: preferenza facoltativa e revocabile, visibile qui; usata solo a parità di criteri tecnici. */
+function FocusSummary() {
+  const row = useLiveQuery(() => db.kv.get('muscleFocus'), []);
+  const focus = (row?.value as string[] | undefined) ?? [];
+  return (
+    <div className="mt" data-testid="focus-summary"><strong className="small">Zone a cui dai priorità</strong>
+      {focus.length ? <div className="chips">{focus.map((m) => <Chip key={m} on onClick={() => kvSet('muscleFocus', focus.filter((x) => x !== m))}>{(MUSCLE_LABEL as Record<string, string>)[m] ?? m} ✕</Chip>)}</div>
+        : <p className="small muted">Nessuna. Puoi indicarle dall'atlante (Progressi → Atlante): servono solo a scegliere a parità di altri criteri, non sono un giudizio sul corpo.</p>}
+    </div>
   );
 }

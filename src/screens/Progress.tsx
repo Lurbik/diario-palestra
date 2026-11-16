@@ -15,7 +15,7 @@ import { MUSCLE_LABEL } from '../ui/labels';
 import { WeightSheet } from './WeightSheet';
 import { patchSettings } from '../db/bootstrap';
 import { BodyMapTab } from './BodyMap';
-import { AtlasScreen } from './Atlas';
+import { AtlasHub } from './AtlasHub';
 import { loadWriteFor } from '../lib/loadDecision';
 
 export function ProgressScreen({ route }: { route: string[] }) {
@@ -27,7 +27,7 @@ export function ProgressScreen({ route }: { route: string[] }) {
       {sub === 'peso' && <WeightTab />}
       {sub === 'allenamento' && <TrainingTab />}
       {sub === 'muscoli' && <BodyMapTab />}
-      {sub === 'atlante' && <AtlasScreen />}
+      {sub === 'atlante' && <AtlasHub route={route} />}
       {sub === 'recupero' && <RecoveryTab />}
     </main>
   );
@@ -79,7 +79,8 @@ function WeightTab() {
       <div className="row wrap"><button className="btn primary" onClick={() => setSheet('weight')}>Registra peso</button><button className="btn" onClick={() => setSheet('waist')}>Circonferenza vita</button></div>
       <div className="card mt">
         <div className="eyebrow">Andamento del peso</div>
-        <LineChart yLabel="kg" series={[{ name: 'pesate', points: daily.map((d) => ({ x: d.dateKey, y: d.kg })), dots: true }, { name: 'media mobile 7 giorni', points: ma.map((d) => ({ x: d.dateKey, y: d.avg })) }]} />
+        <LineChart yLabel="kg" series={[{ name: 'pesate', points: daily.map((d) => ({ x: d.dateKey, y: d.kg })), dots: true }, { name: 'media mobile 7 giorni', points: ma.map((d) => ({ x: d.dateKey, y: d.avg })) }]} markers={suppLog.filter((l) => l.id === 'creatina').map((l) => ({ x: l.start, label: 'inizio creatina' }))} />
+        {suppLog.some((l) => l.id === 'creatina') && <p className="small muted" data-testid="creatine-note">Linea tratteggiata: inizio creatina. Nelle prime settimane il peso può salire per acqua nei muscoli: non è grasso e non è una misura di muscolo guadagnato. Per 4 settimane l'app non propone modifiche alle calorie (regola di prodotto, non un dato scientifico); puoi comunque registrare e cambiare il target se lo decidi tu.</p>}
         <p className="small muted">Linea grigia: pesate · linea blu: media mobile 7 giorni. Le singole pesate oscillano per acqua, glicogeno e contenuto intestinale.</p>
         {weeks.length > 0 && (
           <table className="t mt"><thead><tr><th>Settimana dal</th><th>Media</th><th>Pesate</th></tr></thead>

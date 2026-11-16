@@ -192,6 +192,8 @@ export interface SetEntry {
   restBeforeSec: number | null;
   pain: boolean;
   painNote: string;
+  /** Dettagli facoltativi della segnalazione (zona, lato, esordio, intensità, nota). pain=true resta valido anche senza. */
+  painDetail?: import('../lib/painReport').PainDetail | null;
   techIssue: boolean;
   notes: string;
   savedAt: number;

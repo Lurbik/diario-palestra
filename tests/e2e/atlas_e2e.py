@@ -42,7 +42,7 @@ with sync_playwright() as p:
     page.evaluate(SEED); page.reload(); page.wait_for_load_state("networkidle")
 
     page.goto(BASE + "#/progressi/muscoli")
-    page.get_by_role("link", name="Atlante anatomico (anteprima: spalla, petto, coscia)").click()
+    page.get_by_test_id("open-atlas").click()
     page.wait_for_selector("[data-testid=atlas-map] svg [data-s]")
     n = page.locator("[data-testid=atlas-map] [data-s]").count()
     check("Atlante caricato con le strutture selezionabili (entrambi i lati)", n >= 20, f"{n} zone")

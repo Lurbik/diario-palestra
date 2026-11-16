@@ -171,8 +171,10 @@ export function NotImplemented({ what }: { what: string }) {
 }
 
 /** Grafico a linee minimale in SVG, testo leggibile (≥13px), nessuna dipendenza. */
-export function LineChart({ series, height = 200, yLabel }: {
+export function LineChart({ series, height = 200, yLabel, markers = [] }: {
   series: { name: string; points: { x: string; y: number }[]; dashed?: boolean; dots?: boolean }[]; height?: number; yLabel?: string;
+  /** linee verticali per eventi (es. inizio creatina): data e etichetta */
+  markers?: { x: string; label: string }[];
 }) {
   const all = series.flatMap((s) => s.points);
   if (all.length < 2) return <p className="muted small">Servono almeno due punti per il grafico.</p>;
@@ -191,6 +193,7 @@ export function LineChart({ series, height = 200, yLabel }: {
       <text x={L} y={H - 8}>{xs[0].slice(5).split('-').reverse().join('/')}</text>
       <text x={W - R} y={H - 8} textAnchor="end">{xs[xs.length - 1].slice(5).split('-').reverse().join('/')}</text>
       {yLabel && <text x={W - R} y={T + 4} textAnchor="end">{yLabel}</text>}
+      {markers.filter((m) => m.x >= xs[0] && m.x <= xs[xs.length - 1]).map((m) => { const k = xs.find((d) => d >= m.x) ?? xs[xs.length - 1]; return <g key={m.x + m.label} data-testid="chart-marker"><line x1={x(k)} x2={x(k)} y1={T} y2={H - B} stroke="var(--warn)" strokeDasharray="4 4" /><text x={x(k) + 4} y={T + 16} fill="var(--warn)">{m.label}</text></g>; })}
       {series.map((s, si) => (
         <g key={si}>
           <polyline fill="none" stroke={si === 0 ? 'var(--muted)' : 'var(--accent)'} strokeWidth={si === 0 ? 1.5 : 3} strokeDasharray={s.dashed ? '6 5' : undefined}

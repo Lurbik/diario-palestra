@@ -35,7 +35,9 @@ export function CoachCard({ program }: { program: Program }) {
       }
       const p = settings.profile;
       const templates = rankTemplates({ days: p.trainingDaysPerWeek, equipment: p.equipment, experience: p.experience, minutes: p.sessionMinutes });
-      const res = coachProposals({ program, sessions, sets, today, declaredDays: p.trainingDaysPerWeek, templates, stalls });
+      const focus = ((await db.kv.get('muscleFocus'))?.value as string[] | undefined) ?? [];
+      const exs = new Map((await db.exercises.toArray()).map((e) => [e.id, e.primaryMuscles as string[]]));
+      const res = coachProposals({ program, sessions, sets, today, declaredDays: p.trainingDaysPerWeek, templates, stalls, focus, primaryOf: (id) => exs.get(id) ?? [] });
       if (alive) setProps(res);
     })();
     return () => { alive = false; };
@@ -86,10 +88,13 @@ export function CoachCard({ program }: { program: Program }) {
       {visible.map((pr) => (
         <div key={pr.id} className="coach-item" data-testid={`coach-${pr.id}`}>
           <div className="row between"><strong>{pr.title}</strong><span className="badge">{SCOPE_LABEL[pr.scope]}</span></div>
-          <p className="small">{pr.observation}</p>
-          <p className="small muted mb0">Dati usati: {pr.dataUsed.join(', ')}.{pr.missing.length ? ` Manca: ${pr.missing.join('; ')}.` : ''}</p>
-          {pr.note && <p className="small muted">{pr.note}</p>}
-          <div className="row wrap mt">{pr.actions.map((x) => <button key={x.label} className={`btn sm${x.primary ? ' primary' : ''}`} onClick={() => act(pr, x.action)}>{x.label}</button>)}</div>
+          <dl className="coach-dl small">
+            <dt>Cosa ho visto</dt><dd>{pr.observation}</dd>
+            {pr.actions.find((x) => x.primary) && <><dt>Cosa suggerisco</dt><dd>{pr.actions.find((x) => x.primary)!.label}</dd></>}
+            <dt>Perché</dt><dd>Dati usati: {pr.dataUsed.join(', ')}.{pr.note ? ` ${pr.note}` : ''}</dd>
+            {pr.missing.length > 0 && <><dt>Cosa non so</dt><dd>{pr.missing.join('; ')}</dd></>}
+          </dl>
+          <div className="row wrap mt">{pr.actions.slice(0, 3).map((x) => <button key={x.label} className={`btn sm${x.primary ? ' primary' : ''}`} onClick={() => act(pr, x.action)}>{x.label}</button>)}</div>
         </div>
       ))}
       {!visible.length && <p className="small muted">Nessuna proposta aperta: le hai già valutate. Tornano solo se i dati le confermano.</p>}

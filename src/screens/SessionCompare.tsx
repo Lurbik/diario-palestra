@@ -126,7 +126,7 @@ export function CompareEntry({ form, setForm, ex, machine, loadStep, item, prev,
         {field === 'load' && note && <p className="small muted">{note}</p>}
         <div className="chips mt">
           <Chip on={form.kind === 'warmup'} onClick={() => up({ kind: form.kind === 'warmup' ? 'working' : 'warmup' })}>Riscaldamento</Chip>
-          <Chip danger on={form.pain} onClick={() => up({ pain: !form.pain })}><Icon.alert /> Dolore</Chip>
+          {form.pain && <span className="badge warn"><Icon.alert /> Dolore segnato</span>}
         </div>
         {form.pain && (
           <div className="card danger flat mt">

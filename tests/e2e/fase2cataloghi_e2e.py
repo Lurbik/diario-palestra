@@ -95,7 +95,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(600)
     d = page.evaluate(READ)
     check("Salvato: creatina segnata con data di inizio (usata per sospendere le modifiche alle calorie)", any(l["id"] == "creatina" and not l.get("end") for l in d["log"]), str(d["log"]))
-    check("Stato aggiornato: 'Lo stai usando'", status(page, "creatina")[0] == "Lo stai usando")
+    check("Uso segnato come dato distinto (etichetta 'Lo usi'), la pertinenza resta 'Da considerare'", page.get_by_test_id("supp-creatina").get_by_test_id("supp-inuse").count() == 1 and status(page, "creatina")[0] == "Da considerare")
     page.get_by_role("button", name="Problemi ai reni").click()
     page.wait_for_timeout(600)
     s, r = status(page, "creatina")

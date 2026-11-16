@@ -12,9 +12,9 @@ export const ALLOWED_EQ: Record<EquipmentAccess, EquipmentKind[]> = {
 
 export interface Alternative { exercise: Exercise; reasons: string[] }
 
-export function alternatives(target: Exercise, all: Exercise[], ctx: { access: EquipmentAccess | null; prefs: ExercisePrefs; busyMachineId?: string | null; inSession?: string[]; max?: number }): Alternative[] {
+export function alternatives(target: Exercise, all: Exercise[], ctx: { access: EquipmentAccess | null; prefs: ExercisePrefs; busyMachineId?: string | null; inSession?: string[]; max?: number; focus?: string[] }): Alternative[] {
   const allowed = ALLOWED_EQ[ctx.access ?? 'palestra'];
-  const out: (Alternative & { score: number })[] = [];
+  const out: (Alternative & { score: number; pref: number })[] = [];
   for (const e of all) {
     if (e.id === target.id || e.archived) continue;
     // Vincoli
@@ -31,11 +31,14 @@ export function alternatives(target: Exercise, all: Exercise[], ctx: { access: E
     if (samePattern) { score += 3; reasons.push('stessa funzione nella seduta'); }
     if (shared.length) { score += shared.length; reasons.push('stessi muscoli principali'); }
     if (e.equipmentKind && e.equipmentKind !== target.equipmentKind) reasons.push(`attrezzatura diversa (${e.equipment})`);
-    if (ctx.prefs.favorites.includes(e.id)) { score += 1; reasons.push('tra i tuoi preferiti'); }
+    // Preferenze: contano SOLO a parità dei criteri tecnici (una priorità estetica non sostituisce una tirata con una croce)
+    let pref = 0;
+    if (ctx.focus?.length && e.primaryMuscles.some((m) => ctx.focus!.includes(m))) { pref += 2; reasons.push('coinvolge una zona che hai indicato come priorità'); }
+    if (ctx.prefs.favorites.includes(e.id)) { pref += 1; reasons.push('tra i tuoi preferiti'); }
     if ((e.difficulty ?? 2) <= (target.difficulty ?? 2)) score += 0.5;
     if (e.unilateral !== target.unilateral) reasons.push(e.unilateral ? 'unilaterale' : 'bilaterale');
     reasons.push('storico separato: i kg non si confrontano con la variante precedente');
-    out.push({ exercise: e, reasons, score });
+    out.push({ exercise: e, reasons, score, pref });
   }
-  return out.sort((a, b) => b.score - a.score || a.exercise.name.localeCompare(b.exercise.name)).slice(0, ctx.max ?? 3);
+  return out.sort((a, b) => b.score - a.score || b.pref - a.pref || a.exercise.id.localeCompare(b.exercise.id)).slice(0, ctx.max ?? 3);
 }

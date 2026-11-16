@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { emptyPain, painLabel, urgentSigns, ZONE_LABEL, SIDE_LABEL, type PainDetail, type PainZone, type PainSide } from '../lib/painReport';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, kvGet, kvSet } from '../db/db';
 import type { Exercise, Machine, Session, SessionItem, SetEntry } from '../db/types';
@@ -25,6 +26,7 @@ export interface FormState {
   rirUnknown: boolean;
   pain: boolean;
   painNote: string;
+  painDetail?: PainDetail | null;
   plannedPartials: number | null;
   extraPartials: number | null;
   assistedReps: number | null;
@@ -49,7 +51,7 @@ function toDraft(f: FormState, s: Session, ex: Exercise, itemIndex: number): Set
     validReps: f.conform === 'all' ? full : f.conform === 'unknown' ? null : Math.min(f.validReps ?? 0, full),
     fullRepsOtherSide: ex.unilateral ? f.otherSide : null,
     plannedPartials: f.plannedPartials ?? 0, extraPartials: f.extraPartials ?? 0, assistedReps: f.assistedReps ?? 0, failedAttempts: f.failedAttempts ?? 0,
-    rir: f.rirUnknown ? null : f.rir, rirUnknown: f.rirUnknown, pain: f.pain, painNote: f.painNote, techIssue: f.techIssue, notes: f.notes
+    rir: f.rirUnknown ? null : f.rir, rirUnknown: f.rirUnknown, pain: f.pain, painNote: f.painNote, painDetail: f.pain ? f.painDetail ?? null : null, techIssue: f.techIssue, notes: f.notes
   };
 }
 
@@ -57,7 +59,7 @@ export function fromSet(s: SetEntry): FormState {
   return {
     id: s.id, kind: s.kind, load: s.load, loadPrefilledFrom: null, fullReps: s.fullReps,
     conform: s.validReps == null ? 'unknown' : s.validReps === s.fullReps ? 'all' : 'some', validReps: s.validReps,
-    rir: s.rir, rirUnknown: s.rirUnknown, pain: s.pain, painNote: s.painNote, plannedPartials: s.plannedPartials || null, extraPartials: s.extraPartials || null,
+    rir: s.rir, rirUnknown: s.rirUnknown, pain: s.pain, painNote: s.painNote, painDetail: s.painDetail ?? null, plannedPartials: s.plannedPartials || null, extraPartials: s.extraPartials || null,
     assistedReps: s.assistedReps || null, failedAttempts: s.failedAttempts || null, otherSide: s.fullRepsOtherSide, techIssue: s.techIssue, notes: s.notes
   };
 }
@@ -98,6 +100,8 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
   const prev = prevQ && prevQ.ck === ck ? prevQ.v : undefined;
   const accepted = accQ && accQ.ck === ck ? accQ.v : undefined;
   const itemSets = sets.filter((s) => s.itemIndex === idx);
+  // Dolore segnalato oggi su questo esercizio: niente proposte di carico più alto sul movimento
+  const painHere = [...itemSets].reverse().find((s) => s.pain);
   const working = itemSets.filter((s) => s.kind === 'working');
   const times = sessionTimes(session, now);
   const rest = restState(session, now);
@@ -112,6 +116,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
   const draftLoaded = fs.key === draftKey && fs.loaded;
   const setForm = (f: FormState | null) => setFs({ key: draftKey, form: f, loaded: true });
   const [saving, setSaving] = useState(false);
+  const [painOpen, setPainOpen] = useState(false);
   // Campo attivo del pannello di confronto: si riparte da "Complete" a ogni serie e a ogni esercizio
   const [field, setField] = useState<CompareField>('reps');
   useEffect(() => { setField('reps'); }, [draftKey]);
@@ -263,6 +268,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
             {ex.toConfirm.length > 0 && <p className="small"><span className="badge warn">Da confermare</span> {ex.toConfirm[0]}{ex.toConfirm.length > 1 ? ` (+${ex.toConfirm.length - 1})` : ''}</p>}
             <SessionTools session={session} ex={ex} idx={idx} exercises={exercises} />
 
+            {painHere && <PainBanner detail={painHere.painDetail} onStop={() => setPainOpen(true)} />}
             {form && (
               <CompareEntry form={form} setForm={setForm} ex={ex} machine={machine} loadStep={loadStep} item={item}
                 prev={prev} itemSets={itemSets} field={field} setField={setField} onEdit={(x) => setSheet({ edit: x })} />
@@ -272,8 +278,9 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
       </main>
       {item && ex && form && (
         <div className="bar-bottom">
-          <div>
-            <button className="btn primary xl block" disabled={saving} onClick={doSave} aria-busy={saving}>
+          <div className="save-row">
+            <button className={`btn pain-btn${form.pain ? ' danger' : ''}`} onClick={() => setPainOpen(true)} aria-label={form.pain ? `Dolore segnato: ${painLabel(form.painDetail)}. Modifica` : 'Fastidio o dolore?'}>{form.pain ? 'Dolore ✓' : 'Fastidio o dolore?'}</button>
+            <button className="btn primary xl grow" disabled={saving} onClick={doSave} aria-busy={saving}>
               {saving ? 'Salvataggio…' : form.kind === 'warmup' ? 'Salva riscaldamento' : `Salva serie ${setNo}`}
             </button>
           </div>
@@ -301,6 +308,7 @@ function ActiveSession({ session, exercises }: { session: Session; exercises: Ma
           <button className="btn block" onClick={() => setSheet('add')}><Icon.plus /> Aggiungi esercizio</button>
         </Sheet>
       )}
+      {painOpen && form && ex && <PainSheet form={form} onChange={(f) => setForm(f)} onStop={async () => { await db.sessions.update(session.id, { painReported: true, items: session.items.map((x, j) => (j === idx ? { ...x, skipped: true } : x)), currentIndex: Math.min(idx + 1, session.items.length - 1) }); setPainOpen(false); toast({ text: 'Esercizio interrotto e segnalazione annotata' }); }} onClose={() => setPainOpen(false)} />}
       {sheet === 'add' && <AddExerciseSheet session={session} exercises={exercises} onClose={() => setSheet(null)} />}
       {sheet === 'finish' && <FinishSheet session={session} sets={sets} onClose={() => setSheet(null)} />}
       {sheet && typeof sheet === 'object' && ex && (
@@ -394,7 +402,8 @@ function EditSetSheet({ set, ex, loadStep, onClose }: { set: SetEntry; ex: Exerc
               validReps: form.conform === 'all' ? full : form.conform === 'unknown' ? null : Math.min(form.validReps ?? 0, full),
               fullRepsOtherSide: ex.unilateral ? form.otherSide : null, rir: form.rirUnknown ? null : form.rir, rirUnknown: form.rirUnknown,
               plannedPartials: form.plannedPartials ?? 0, extraPartials: form.extraPartials ?? 0, assistedReps: form.assistedReps ?? 0, failedAttempts: form.failedAttempts ?? 0,
-              pain: form.pain, painNote: form.painNote, techIssue: form.techIssue, notes: form.notes
+              // una serie già segnata con dolore resta tale anche se i dettagli restano ignoti
+              pain: form.pain, painNote: form.painNote, painDetail: form.pain ? form.painDetail ?? null : null, techIssue: form.techIssue, notes: form.notes
             });
             toast({ text: 'Modifica salvata ✓' });
             onClose();
@@ -452,4 +461,41 @@ function beep() {
     o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(audioCtx.destination);
     o.start(); o.stop(audioCtx.currentTime + 0.25);
   } catch { /* audio non disponibile */ }
+}
+
+/** "Fastidio o dolore?": compare solo al tocco; tutto facoltativo tranne il fatto stesso. Usabile con una mano. */
+function PainSheet({ form, onChange, onStop, onClose }: { form: FormState; onChange: (f: FormState) => void; onStop: () => void; onClose: () => void }) {
+  const [d, setD] = useState<PainDetail>(form.painDetail ?? emptyPain());
+  const up = (p: Partial<PainDetail>) => setD({ ...d, ...p });
+  const save = () => { onChange({ ...form, pain: true, painDetail: d, painNote: d.note || form.painNote }); onClose(); };
+  return (
+    <Sheet title="Fastidio o dolore" onClose={onClose}>
+      <p className="small muted">Facoltativo: indica solo quello che sai. Resta su questo dispositivo. Un indolenzimento dei giorni dopo l'allenamento (DOMS) o lo sforzo muscolare non sono questa segnalazione.</p>
+      <strong className="small">Dove</strong>
+      <div className="chips" role="group" aria-label="Zona">{(Object.keys(ZONE_LABEL) as PainZone[]).map((z) => <Chip key={z} on={d.zone === z} onClick={() => up({ zone: d.zone === z ? null : z })}>{ZONE_LABEL[z]}</Chip>)}</div>
+      <strong className="small">Lato</strong>
+      <div className="chips" role="group" aria-label="Lato">{(Object.keys(SIDE_LABEL) as PainSide[]).map((x) => <Chip key={x} on={d.side === x} onClick={() => up({ side: d.side === x ? null : x })}>{SIDE_LABEL[x]}</Chip>)}</div>
+      <strong className="small">Quando</strong>
+      <div className="chips" role="group" aria-label="Esordio"><Chip on={d.onset === 'durante'} onClick={() => up({ onset: d.onset === 'durante' ? null : 'durante' })}>Durante la serie</Chip><Chip on={d.onset === 'dopo'} onClick={() => up({ onset: d.onset === 'dopo' ? null : 'dopo' })}>Dopo</Chip></div>
+      <details><summary className="small">Intensità e nota (facoltative)</summary>
+        <div className="chips" role="group" aria-label="Intensità 0–10">{Array.from({ length: 11 }, (_, i) => <Chip key={i} on={d.intensity === i} onClick={() => up({ intensity: d.intensity === i ? null : i })}>{i}</Chip>)}</div>
+        <Field label="Nota"><input value={d.note} onChange={(e) => up({ note: e.target.value })} /></Field>
+      </details>
+      <div className="card warn flat small mt">{urgentSigns(d.zone)}</div>
+      <div className="col mt">
+        <button className="btn primary block" onClick={save}>Segna sulla serie e continua</button>
+        <button className="btn block" onClick={() => { save(); onStop(); }}>Segna e interrompi questo esercizio</button>
+        {form.pain && <button className="btn ghost block" onClick={() => { onChange({ ...form, pain: false, painDetail: null }); onClose(); }}>Togli la segnalazione da questa serie</button>}
+      </div>
+    </Sheet>
+  );
+}
+
+function PainBanner({ detail, onStop }: { detail: PainDetail | null | undefined; onStop: () => void }) {
+  return (
+    <div className="banner warn small" data-testid="pain-banner">
+      <span>Hai segnalato dolore in questo esercizio oggi ({painLabel(detail)}): l'app non propone carichi più alti su questo movimento. Puoi interromperlo o registrare la segnalazione. {urgentSigns(detail?.zone ?? null)}</span>
+      <button className="btn sm" onClick={onStop}>Opzioni</button>
+    </div>
+  );
 }

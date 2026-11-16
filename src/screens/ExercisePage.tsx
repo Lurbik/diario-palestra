@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import type { Exercise } from '../db/types';
 import { Icon, Sheet, go, useToast } from '../ui/kit';
-import { BodySvg, PatternIcon } from '../ui/visuals';
+import { PatternIcon } from '../ui/visuals';
+import { EXERCISE_STRUCTURES, ROLE_LABEL, structureByKey } from '../catalog/anatomy3d';
 import { MUSCLE_LABEL, CONVENTION_LABEL } from '../ui/labels';
 import { configKey, exposuresFor } from '../lib/workout';
 import { formatDateIt, WEEKDAYS } from '../lib/dates';
@@ -16,6 +17,7 @@ export function ExercisePage({ id }: { id: string }) {
   const ex = useLiveQuery(() => db.exercises.get(id), [id]);
   const last = useLiveQuery(async () => { if (!ex) return null; const e = await exposuresFor(configKey(ex)); return e.at(-1) ?? null; }, [ex?.id, ex?.configVersion]);
   const program = useLiveQuery(() => db.programs.filter((p) => p.isActive && !p.archived).first(), []);
+  const exNames = new Map((useLiveQuery(() => db.exercises.toArray(), []) ?? []).map((e) => [e.id, e.name]));
   const [addSheet, setAddSheet] = useState(false);
   if (!ex) return <main className="main"><p className="muted">Caricamento…</p></main>;
   const fav = !!ex.favorite;
@@ -43,12 +45,12 @@ export function ExercisePage({ id }: { id: string }) {
       <div className="grid-desktop mt">
         <section className="card">
           <div className="eyebrow">Muscoli coinvolti</div>
-          <div className="grid2">
-            <BodySvg view="front" label="Vista anteriore" highlight={{ primary: ex.primaryMuscles, secondary: ex.secondaryMuscles }} />
-            <BodySvg view="back" label="Vista posteriore" highlight={{ primary: ex.primaryMuscles, secondary: ex.secondaryMuscles }} />
-          </div>
           <p className="small"><strong>Principali:</strong> {ex.primaryMuscles.map((m) => MUSCLE_LABEL[m]).join(', ') || '—'}<br /><strong>Secondari:</strong> {ex.secondaryMuscles.map((m) => MUSCLE_LABEL[m]).join(', ') || '—'}</p>
-          <p className="small muted">Silhouette schematica: indica le regioni coinvolte, non quanto un muscolo lavora o cresce.</p>
+          {EXERCISE_STRUCTURES.some((r) => r.exerciseId === ex.id) && (
+            <ul className="small" data-testid="ex-structures">{EXERCISE_STRUCTURES.filter((r) => r.exerciseId === ex.id).map((r) => <li key={r.key + r.role}>{structureByKey(r.key)?.it ?? r.key} — <strong>{ROLE_LABEL[r.role]}</strong>{r.quality === 'studio limitato' ? ' (evidenza limitata)' : ''}</li>)}</ul>
+          )}
+          <a className="btn block" href={`#/progressi/atlante/ex/${ex.id}`} data-testid="ex-open-atlas">Vedi nell'atlante</a>
+          <p className="small muted">"Coinvolto", "possibile enfasi" e "principale" non sono percentuali di attivazione né di crescita.</p>
         </section>
         <section className="card">
           <div className="eyebrow">Come si fa</div>
@@ -58,6 +60,18 @@ export function ExercisePage({ id }: { id: string }) {
           <p className="small muted">Video: nessuna dimostrazione verificata collegata per questa variante. Indicazioni generali, non correzione tecnica personale.</p>
         </section>
       </div>
+      <section className="card" data-testid="ex-editorial">
+        <div className="eyebrow">Quando e come usarlo</div>
+        {ex.whenToChoose || ex.whenToMove || ex.comparisonLimits || ex.alternatives?.length ? (
+          <>
+            {ex.whenToChoose && <p className="small"><strong>Quando sceglierlo:</strong> {ex.whenToChoose}</p>}
+            {ex.whenToMove && <p className="small"><strong>Dove metterlo nella seduta:</strong> {ex.whenToMove}</p>}
+            {ex.comparisonLimits && <p className="small"><strong>Cosa rende i carichi non confrontabili:</strong> {ex.comparisonLimits}</p>}
+            {ex.alternatives?.length ? <p className="small"><strong>Alternative se è occupato:</strong> {ex.alternatives.map((id, i) => <span key={id}>{i ? ', ' : ''}<a href={`#/allenamento/esercizio/${id}`}>{exNames.get(id) ?? id}</a></span>)}</p> : null}
+          </>
+        ) : <p className="small muted">Scheda editoriale non ancora compilata per questo esercizio: "quando sceglierlo", posizione nella seduta, limiti del confronto e alternative sono da scrivere. Le alternative per oggi restano disponibili durante la seduta (Macchina occupata).</p>}
+        {ex.measure && ex.measure !== 'reps' && <p className="small muted">Si registra in {ex.measure === 'seconds' ? 'secondi' : 'metri'}, non in ripetizioni.</p>}
+      </section>
       <section className="card">
         <div className="eyebrow">Il tuo storico</div>
         {last ? <p className="small">Ultima volta {formatDateIt(last.dateKey, true)}: {last.sets.filter((s) => s.kind === 'working').map((s) => `${fmtNum(s.load, 2)}×${s.validReps ?? '?'}`).join(', ')}</p> : <p className="small muted">Nessuna seduta registrata con questa configurazione.</p>}

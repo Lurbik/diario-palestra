@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, kvSet } from '../db/db';
 import type { Muscle } from '../db/types';
 import { Chip, Tabs } from '../ui/kit';
-import { BodySvg, MUSCLE_VIEW, fillFor } from '../ui/visuals';
+import { MUSCLE_VIEW } from '../ui/visuals';
 import { ALL_MUSCLES, MUSCLE_LABEL } from '../ui/labels';
 import { workByMuscle, plannedByMuscle, workLabel } from '../lib/bodymap';
 import { addDays, dateKey, formatDateIt } from '../lib/dates';
@@ -40,7 +40,7 @@ export function BodyMapTab() {
 
   return (
     <>
-      <a className="btn block" href="#/progressi/atlante" style={{ marginBottom: 12 }}>Atlante anatomico (anteprima: spalla, petto, coscia)</a>
+      <a className="btn primary block" href="#/progressi/atlante" style={{ marginBottom: 12 }} data-testid="open-atlas">Apri l'atlante anatomico</a>
       <Tabs value={view} onChange={(v) => { setView(v); setSel(null); }} items={[['lavoro', 'Lavoro registrato'], ['piano', 'Piano'], ['sensazioni', 'Sensazioni']]} />
       {view === 'lavoro' && <div className="chips"><Chip on={days === 7} onClick={() => setDays(7)}>7 giorni</Chip><Chip on={days === 28} onClick={() => setDays(28)}>28 giorni</Chip></div>}
       <div className="card mt">
@@ -48,16 +48,12 @@ export function BodyMapTab() {
         {total === 0 ? (
           <p className="muted">{view === 'lavoro' ? 'Nessun allenamento registrato nel periodo.' : view === 'piano' ? 'Nessuna scheda attiva: niente da mostrare.' : 'Nessuna sensazione registrata. Tocca un muscolo per aggiungerne una.'}</p>
         ) : null}
-        <div className="grid2">
-          <BodySvg view="front" label="Vista anteriore, tocca un muscolo" values={values} selected={sel} onSelect={setSel} />
-          <BodySvg view="back" label="Vista posteriore, tocca un muscolo" values={values} selected={sel} onSelect={setSel} />
-        </div>
-        <div className="legend mt" aria-hidden>
-          <span><i style={{ background: fillFor(0, 1) }} />0</span>
-          <span><i style={{ background: fillFor(1, 3) }} />poco</span>
-          <span><i style={{ background: fillFor(2, 3) }} />medio</span>
-          <span><i style={{ background: fillFor(3, 3) }} />di più (max {max})</span>
-        </div>
+        {/* Niente terza mappa: qui numeri e barre; la figura anatomica è nell'atlante */}
+        <ul className="bars" data-testid="muscle-bars">
+          {[...values.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([m, v]) => (
+            <li key={m}><button className="listbtn" aria-pressed={sel === m} onClick={() => setSel(m)}><span className="bar-label">{MUSCLE_LABEL[m]}</span><span className="bar"><i style={{ width: `${max ? (v / max) * 100 : 0}%` }} /></span><span className="num">{v}</span></button></li>
+          ))}
+        </ul>
         <p className="small muted mt">I colori indicano quantità di {view === 'sensazioni' ? 'segnalazioni' : 'serie'}, non sviluppo, forza o qualità di un muscolo. "Meno lavoro" non significa "poco sviluppato".</p>
       </div>
       {sel && <MusclePanel m={sel} view={view} work={work.get(sel)} planned={planned.get(sel) ?? 0} feelings={recentFeel.filter((f) => f.muscle === sel)} focus={focus.includes(sel)}

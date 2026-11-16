@@ -110,9 +110,10 @@ function SubstituteSheet({ title, intro, session, ex, idx, exercises, reason, on
   const toast = useToast();
   const settings = useSettings();
   const prefs = useLiveQuery(() => getPrefs(), []);
+  const focus = (useLiveQuery(() => db.kv.get('muscleFocus'), [])?.value as string[] | undefined) ?? [];
   const [alsoProgram, setAlsoProgram] = useState(false);
   if (!prefs) return null;
-  const alts = alternatives(ex, [...exercises.values()], { access: settings.profile.equipment, prefs, busyMachineId: reason === 'busy' ? ex.machineId : null, inSession: session.items.map((i) => i.exerciseId), max: 3 });
+  const alts = alternatives(ex, [...exercises.values()], { access: settings.profile.equipment, prefs, busyMachineId: reason === 'busy' ? ex.machineId : null, inSession: session.items.map((i) => i.exerciseId), max: 3, focus });
   const record = async () => {
     if (reason === 'dislike') await kvSet('exercisePrefs', { ...prefs, disliked: [...new Set([...prefs.disliked, ex.id])] });
     if (reason === 'discomfort') await kvSet('exercisePrefs', { ...prefs, discomfort: [...new Set([...prefs.discomfort, ex.id])] });
@@ -126,6 +127,7 @@ function SubstituteSheet({ title, intro, session, ex, idx, exercises, reason, on
         <div className="card flat" key={a.exercise.id}>
           <strong>{a.exercise.name}</strong>
           <p className="seg-why">{a.reasons.join(' · ')}</p>
+          <p className="small mb0"><a href={`#/progressi/atlante/ex/${a.exercise.id}`}>Muscoli coinvolti nell'atlante</a> <span className="muted">(la seduta resta aperta)</span></p>
           <button className="btn sm primary" onClick={async () => {
             await record();
             await db.sessions.update(session.id, { items: session.items.map((x, j) => (j === idx ? { ...x, exerciseId: a.exercise.id } : x)) });

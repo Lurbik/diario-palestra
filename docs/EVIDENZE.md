@@ -82,3 +82,13 @@ Le domande di sicurezza (reni, cuore o pressione, farmaci, gravidanza, minore et
 1. **Atlante anatomico 2D**, poi la demo 3D della spalla. Serve scaricare risorse con licenza CC BY-SA (OpenStax/Wikimedia) o Z-Anatomy: da approvare prima.
 2. **Revisione settimanale**: tre dati utilizzabili e una sola proposta modificabile.
 3. **Cataloghi a lotti** verso le quote (200–300 esercizi e ricette, oltre 1.000 alimenti), con le voci non documentate lasciate in bozza.
+
+## 8. Registro delle affermazioni usate nell'atlante (16 novembre 2026)
+
+| Affermazione nell'app | Fonte verificata | Popolazione | Cosa sostiene | Cosa NON sostiene |
+|---|---|---|---|---|
+| Azioni del deltoide (tre porzioni) e del grande pettorale | [OpenStax A&P 2e, 11.5](https://openstax.org/books/anatomy-and-physiology-2e/pages/11-5-muscles-of-the-pectoral-girdle-and-upper-limbs) | manuale di anatomia | funzione anatomica generale | efficacia di un esercizio |
+| Panca inclinata: «possibile enfasi» sul capo clavicolare | [Chaves et al. 2020](https://pubmed.ncbi.nlm.nih.gov/32922646/) | giovani uomini non allenati, misure per sede | differenze regionali di ipertrofia tra panca piana e inclinata in quel campione | percentuali di «petto alto», risultati su macchine diverse o su persone allenate |
+| Ordine degli esercizi | [Nunes et al. 2020](https://pubmed.ncbi.nlm.nih.gov/32077380/) | revisione e meta-analisi | miglioramento di forza maggiore nell'esercizio messo prima | una superiorità generale per l'ipertrofia |
+| Criteri d'urgenza per dolore articolare | [NHS, joint pain](https://www.nhs.uk/symptoms/joint-pain/) | indicazioni generali per il pubblico | quando chiedere assistenza | diagnosi; i riferimenti al servizio sanitario inglese non vengono copiati |
+| Creatina 3–5 g/die, carico non necessario | [ISSN 2017](https://pubmed.ncbi.nlm.nih.gov/28615996/), [AIS](https://www.ausport.gov.au/ais/nutrition/supplements/group_a/performance-supplements2/creatine/how-and-when-do-i-use-it) | adulti sani | protocolli generali | dosi personalizzate; uso in presenza di malattie o farmaci |

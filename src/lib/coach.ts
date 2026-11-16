@@ -49,6 +49,10 @@ export interface CoachInput {
   declaredDays: number | null;  // giorni disponibili dichiarati nel profilo
   templates: { id: string; name: string; days: number; reasons: string[] }[]; // già ordinati per compatibilità
   stalls: { exerciseName: string; exerciseId: string }[];
+  /** zone indicate come priorità (preferenza revocabile, non un giudizio sul corpo) */
+  focus?: string[];
+  /** muscoli principali per esercizio (per riconoscere una priorità) */
+  primaryOf?: (exerciseId: string) => string[];
 }
 
 export function coachProposals(inp: CoachInput): CoachProposal[] {
@@ -109,17 +113,18 @@ export function coachProposals(inp: CoachInput): CoachProposal[] {
       }).length;
       if (skipped < 3) return;
       const atEnd = idx >= day.items.length - 2;
+      const isFocus = !!inp.focus?.length && (inp.primaryOf?.(it.exerciseId) ?? []).some((m) => inp.focus!.includes(m));
       const target = 1; // subito dopo il primo esercizio, che resta il principale del giorno
       out.push({
         id: `skip_${day.id}_${it.id}`, scope: 'day',
-        title: `Esercizio saltato ${skipped} volte su 4`,
+        title: isFocus ? `Saltato ${skipped} volte su 4: è in una zona che hai indicato come priorità` : `Esercizio saltato ${skipped} volte su 4`,
         observation: `Nel giorno "${day.name}" l'esercizio in posizione ${idx + 1} non è stato fatto in ${skipped} delle ultime 4 sedute${atEnd ? ', di solito a fine seduta' : ''}.`,
         dataUsed: occ.map((s) => s.dateKey),
         missing: ['perché lo salti: tempo, attrezzatura occupata o preferenza? Uno skip non significa che non ti piace'],
-        note: target !== idx ? `Anticiparlo cambia l'ordine: i confronti con le sedute in cui era a fine allenamento non saranno diretti.` : undefined,
+        note: (target !== idx ? 'Anticiparlo cambia solo l\'ordine: le serie totali restano uguali, ma i confronti con le sedute in cui era a fine allenamento non saranno diretti.' : '') + (isFocus ? ' Lo proponi come priorità tu: non è una valutazione del tuo corpo.' : ''),
         actions: [
-          { label: 'È una priorità: anticipalo', action: { kind: 'move_item', programId: p.id, dayId: day.id, itemId: it.id, toIndex: target }, primary: true },
-          { label: 'Rendilo facoltativo', action: { kind: 'set_optional', programId: p.id, dayId: day.id, itemId: it.id, optional: true } },
+          { label: 'È una priorità: anticipalo', action: { kind: 'move_item', programId: p.id, dayId: day.id, itemId: it.id, toIndex: target }, primary: isFocus },
+          { label: 'Rendilo facoltativo', action: { kind: 'set_optional', programId: p.id, dayId: day.id, itemId: it.id, optional: true }, primary: !isFocus },
           { label: 'Mantieni com\'è', action: { kind: 'keep' } }
         ]
       });

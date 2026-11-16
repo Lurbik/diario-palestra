@@ -68,6 +68,7 @@ export async function buildSupplementContext(settings: Settings): Promise<Supple
     lateSessionShare: lateSessionShare(sessions, usualBedtimeMin(settings, sleep)),
     fishPerWeek: fishPerWeek(diary, fMap, ing, loggedDays),
     noDairy: settings.excludedTags.includes('latte') || p.allergies.some((a) => /latt|siero|whey/i.test(a)),
-    using: log.map((l) => l.id)
+    using: log.map((l) => l.id),
+    declaredDays: p.trainingDaysPerWeek
   };
 }

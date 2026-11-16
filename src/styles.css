@@ -298,3 +298,29 @@ table.cmp tr.cur td.today { outline: 3px solid var(--accent-bg); outline-offset:
 .atlas-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 12px; }
 .atlas-legend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; border: 1px solid #0003; }
 .sw.atlas-w0 { background: #ddd6cb; } .sw.atlas-w1 { background: #f3c9a3; } .sw.atlas-w2 { background: #e07a4f; } .sw.atlas-w3 { background: #9c3416; }
+.dose-strip { display: flex; gap: 4px; margin-top: 8px; font-size: 1.1rem; }
+.dose-strip .dose { width: 18px; text-align: center; }
+.dose-strip .dose.taken { color: var(--ok, #2e7d32); }
+.dose-strip .dose.skipped { color: var(--warn, #b26a00); }
+.dose-strip .dose.none { color: #999; }
+
+.save-row { display: flex; gap: 8px; align-items: stretch; }
+.save-row .pain-btn { flex: 0 0 auto; max-width: 38%; white-space: normal; line-height: 1.15; font-size: .9rem; }
+.save-row .grow { flex: 1 1 auto; }
+
+.coach-dl { margin: 6px 0 0; }
+.coach-dl dt { font-weight: 600; margin-top: 4px; }
+.coach-dl dd { margin: 0 0 2px; }
+
+/* Atlante 3D */
+.atlas3d-wrap { position: relative; }
+.atlas3d { width: 100%; height: min(62vh, 520px); border-radius: 14px; overflow: hidden; background: #f4f1ea; touch-action: none; }
+.atlas3d canvas { display: block; width: 100% !important; height: 100% !important; }
+.atlas3d-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.atlas3d-tools .btn { min-height: 40px; min-width: 44px; }
+.sw.r-principale { background: #9c3416; } .sw.r-secondario { background: #e39a6d; } .sw.r-possibile_enfasi { background: #7c3aed; }
+
+.bars { list-style: none; padding: 0; margin: 8px 0; }
+.bars .listbtn { display: grid; grid-template-columns: 9.5em 1fr 2.5em; gap: 8px; align-items: center; }
+.bars .bar { height: 10px; background: #e7e1d6; border-radius: 6px; overflow: hidden; }
+.bars .bar i { display: block; height: 100%; background: #c2552e; }
