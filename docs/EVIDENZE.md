@@ -1,0 +1,70 @@
+# Evidenze e regole dell'app
+
+Ricerca aggiornata al 16 novembre 2026. Fonti primarie: posizioni ufficiali (ISSN, IOC, EFSA, Academy of Nutrition and Dietetics), meta-analisi e studi controllati. Per ogni tema: cosa dicono le prove, quanto sono solide, cosa fa l'app e cosa evita di proposito.
+
+**Regola generale.** Le fonti descrivono medie di gruppo. L'app le usa per scegliere default prudenti e spiegare le proposte, mai per prevedere il risultato di una persona. Ogni soglia operativa è indicata come scelta di prodotto modificabile.
+
+## 1. Allenamento
+
+| Tema | Prove | Solidità | Cosa fa l'app |
+|---|---|---|---|
+| Volume settimanale | Relazione dose-risposta graduale fra serie e ipertrofia/forza, con rendimenti decrescenti (Pelland 2025; ACSM 2026) | buona sulle medie | Le schede brevi (2–4 giorni) usano volumi moderati: una scheda che entra nella settimana vale più di una "ottimale" che si salta. Nessun numero minimo imposto per muscolo. |
+| Vicinanza al cedimento | 1–3 RIR produce adattamenti simili al cedimento con meno fatica (Robinson 2024, Refalo 2024) | moderata | RIR proposto 1–3; "non so" non vale 0; il cedimento non è richiesto. |
+| Recuperi tra le serie | Recuperi molto brevi non favoriscono l'ipertrofia (Singer 2024) | moderata | Recupero di partenza 150 s per i multiarticolari a ripetizioni basse, 90 s per gli isolamenti; "ho meno tempo" toglie serie, non comprime i recuperi. |
+| Range di ripetizioni | Carichi diversi danno ipertrofia simile se le serie sono vicine al cedimento | buona | Range ampi (6–10, 8–12, 10–15, 12–20) come scelta pratica. |
+| Ordine degli esercizi | Il beneficio di iniziare da un esercizio è dimostrato soprattutto per la forza in quell'esercizio, meno per l'ipertrofia (Nunes 2020) | moderata | Prossima fase (coach): ordine scelto in base alla priorità dichiarata, con avviso quando un cambio d'ordine rompe il confronto. |
+| Parziali in allungamento | Risultati promettenti ma limitati a muscoli e popolazioni specifiche (Wolf 2025, Larsen 2025) | debole | Le parziali sono registrate a parte e non entrano nella progressione. |
+| Macchine diverse | Leve e incrementi diversi: i kg non sono confrontabili | logica di misura | Storico, carico precompilato e proposte separati per macchina (fase 3). |
+
+## 2. Nutrizione
+
+| Tema | Prove | Solidità | Cosa fa l'app |
+|---|---|---|---|
+| Proteine giornaliere | Media utile circa 1,6 g/kg, fino a 2,2 g/kg (Morton 2018) | buona | Riferimento mostrato come informazione; il consiglio sulle proteine in polvere parte dai giorni COMPLETI registrati. |
+| Proteine in deficit | 2,3–3,1 g/kg di massa magra in preparazione (Helms 2014) | moderata, popolazione specifica | Solo informazione; nessun target automatico. |
+| Distribuzione nei pasti | Circa 0,4 g/kg per pasto su 4 pasti come strategia ragionevole (Schoenfeld e Aragon 2018); revisioni successive trovano effetti sulla massa poco chiari | debole–moderata | Nessuna regola rigida; possibile suggerimento nella fase "cibo adattivo". |
+| Ritmo di aumento di peso | Surplus moderato: guadagni magri simili a surplus grandi, con meno grasso (Helms 2023); 0,25–0,5%/settimana è una sintesi pratica, non un valore testato | debole | Ritmo prudente configurabile (default 0,1–0,25%/settimana); proposte da +/− 100 kcal, mai da una sola pesata. |
+| Ritmo di calo | 0,5–1%/settimana in preparazione agonistica (Helms 2014) | moderata | Default più prudente (0,25–0,75%/settimana) per uso quotidiano. |
+| Dati incompleti | — | logica | Calorie sconosciute ≠ 0; giorni non completi esclusi; nessuna modifica con dati insufficienti. |
+
+## 3. Sonno
+
+- Una notte in bianco riduce la sintesi proteica muscolare del 18% (Lamon 2021, 13 persone, senza allenamento). Più notti di sonno ridotto peggiorano quantità e qualità dell'allenamento.
+- Caffeina presa fino a 6 ore prima di dormire riduce il sonno di oltre un'ora, spesso senza accorgersene (Drake 2013, 12 persone, 400 mg).
+- Riferimento generale: almeno 7 ore per gli adulti (AASM/SRS).
+
+**Cosa fa l'app.** Il piano del sonno parte dalla sveglia; la caffeina viene sconsigliata quando almeno metà delle sedute finisce a meno di 6 ore dall'ora abituale di andare a letto.
+
+**Prossima fase (coach).** Una notte molto breve segnata nel diario non deve far diagnosticare uno stallo né contare come prova contro la scheda.
+
+## 4. Integratori
+
+Gerarchia applicata: **sicurezza → cibo → esami → integratore**. L'app non dice mai "prendi X". Mostra uno stato fra: da considerare, prima il cibo, prima un esame, non serve ora, sconsigliato, prima il medico. Indica sempre quali dati ha usato e cosa manca.
+
+| Integratore | Prove | Quando l'app lo mostra "da considerare" | Note di sicurezza |
+|---|---|---|---|
+| Creatina monoidrato | Forti (ISSN 2017; IOC 2018) | ≥ 6 sedute negli ultimi 28 giorni | Peso +1–2 kg d'acqua all'inizio: segnando la data di inizio, la proposta calorie si ferma per 4 settimane. Alza la creatinina degli esami. Reni, gravidanza, minori → prima il medico. |
+| Caffeina | Forti (ISSN 2021) | Se le sedute non sono vicine al sonno | Limiti EFSA: 200 mg alla volta, 400 mg/die da tutte le fonti. Cuore, ansia, gravidanza → medico. |
+| Proteine in polvere | Conta la quota totale | Solo se i giorni completi mostrano una quota sotto 1,6 g/kg: "prima il cibo, la polvere se è più comoda" | Allergia al latte o alimentazione vegana → proteine vegetali. |
+| Vitamina D | Deboli per la forza (meta-analisi 2019 e 2023) | Mai senza esame | Dosi alte senza controllo possono essere dannose. |
+| Omega-3 | Deboli: piccolo effetto sulla forza, nessuno sulla massa | Mai come prima scelta: pesce prima | Anticoagulanti → medico. |
+| Vitamina B12 | Forti per chi è vegano (AND 2016) | Alimentazione vegana | Dose e forma con il farmacista. |
+| Ferro | Utile solo per carenza diagnosticata | Mai senza esami | L'accumulo è possibile e dannoso. |
+| Beta-alanina | Moderate per sforzi di 1–4 minuti | Non per l'allenamento con i pesi tipico | Formicolio transitorio. |
+| BCAA, booster, brucia-grassi | Insufficienti | Sempre "sconsigliati" | Categoria a più alto rischio di sostanze non dichiarate (revisione 2022: oltre un quarto dei prodotti analizzati a rischio). |
+
+Le domande di sicurezza (reni, cuore o pressione, farmaci, gravidanza, minore età, controlli antidoping) e il tipo di alimentazione restano solo sul dispositivo e non sono preimpostate.
+
+## 5. Cosa l'app NON fa, di proposito
+
+- Non stima la massa muscolare o lo "sviluppo" di un muscolo dalle serie registrate.
+- Non fa diagnosi né propone terapie (dolore, carenze, sonno).
+- Non cambia obiettivo o calorie per una sola pesata, per giornate registrate a metà o nelle prime settimane di creatina.
+- Non propone integratori a chi ha indicato condizioni a rischio, né dosi oltre i limiti EFSA per la caffeina.
+- Non usa percentuali di "attivazione" muscolare non documentate per scegliere gli esercizi.
+
+## 6. Prossime regole da implementare (in ordine)
+
+1. **Coach allenamento.** Notte molto breve o seduta incompleta: non conta come stallo. Ordine degli esercizi secondo la priorità dichiarata. Proposte "solo oggi" separate da quelle permanenti.
+2. **Cibo adattivo.** Varianti di grammatura con l'effetto su kcal, proteine e spesa; spostare parte della colazione a uno spuntino; ritmo di variazione del peso diverso per obiettivo ed esperienza, se l'utente lo sceglie.
+3. **Revisione settimanale.** Tre dati utilizzabili e una sola proposta modificabile.

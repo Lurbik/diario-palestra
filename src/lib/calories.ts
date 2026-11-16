@@ -83,6 +83,8 @@ export function proposeCalories(args: {
   today: string;
   rules?: CalorieRules;
   goal?: 'massa' | 'mantenimento' | 'dimagrimento';
+  /** Periodi in cui il peso è poco interpretabile (es. inizio creatina): nessuna modifica se si sovrappongono alla finestra. */
+  confounders?: { label: string; from: string; until: string }[];
 }): CalorieProposal {
   const rules = args.rules ?? DEFAULT_CAL_RULES;
   const q = dataQuality(args.weights, args.completeDiaryDays, args.today, rules);
@@ -98,6 +100,10 @@ export function proposeCalories(args: {
   const rate = (s.kgPerDay * 7 / s.meanKg) * 100;
   const seRate = (s.seKgPerDay * 7 / s.meanKg) * 100;
   const rateTxt = `Andamento stimato: ${rate.toFixed(2).replace('.', ',')}% del peso a settimana (±${(2 * seRate).toFixed(2).replace('.', ',')}).`;
+  const conf = (args.confounders ?? []).filter((c) => c.from <= args.today && c.until >= from);
+  if (conf.length) {
+    return { kind: 'postpone', title: 'Peso meno interpretabile: nessuna modifica per ora', reasons: [rateTxt, ...conf.map((c) => `${c.label}: dal ${c.from} al ${c.until} il peso può variare per motivi che non sono grasso né muscolo. Le calorie restano come sono.`)], deltaKcal: null, ratePctPerWeek: rate };
+  }
   if (recentFlags.length) {
     return { kind: 'postpone', title: 'Peso meno interpretabile: valuta di rinviare', reasons: [rateTxt, `Annotazioni recenti (${[...new Set(recentFlags.flatMap((w) => w.flags))].join(', ')}) possono alterare il peso (acqua, glicogeno, contenuto intestinale).`], deltaKcal: null, ratePctPerWeek: rate };
   }

@@ -8,6 +8,7 @@ import { patchSettings } from '../db/bootstrap';
 import { addDays, dateKey, formatDateIt, weekStart, weekdayOf, WEEKDAYS, WEEKDAYS_SHORT } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { planMeals } from '../lib/planner';
+import { SupplementsScreen } from './Supplements';
 import { isAwaySlot, coldAvailable, awayContextFrom } from '../lib/away';
 import { replaceProposals } from '../lib/planStore';
 import { rulesFrom } from '../lib/recipes';
@@ -27,6 +28,7 @@ export function MoreScreen({ route, offline }: { route: string[]; offline: { rea
   const back = <a href="#/altro" className="small">‹ Altro</a>;
   if (sub === 'calendario') return <main className="main">{back}<CalendarScreen /></main>;
   if (sub === 'sonno') return <main className="main">{back}<SleepScreen /></main>;
+  if (sub === 'integratori') return <main className="main">{back}<SupplementsScreen /></main>;
   if (sub === 'fonti') return <main className="main">{back}<SourcesScreen /></main>;
   if (sub === 'impostazioni') return <main className="main">{back}<SettingsScreen /></main>;
   if (sub === 'backup') return <main className="main">{back}<BackupScreen /></main>;
@@ -35,6 +37,7 @@ export function MoreScreen({ route, offline }: { route: string[]; offline: { rea
   const items: [string, string, string][] = [
     ['calendario', 'Calendario', 'Piano pasti, preparazioni, esportazione calendario'],
     ['sonno', 'Sonno', 'Ore stimate, qualità, sonnellini'],
+    ['integratori', 'Integratori', 'Cosa serve e cosa no, in base ai tuoi dati, con le fonti'],
     ['fonti', 'Fonti', 'Bibliografia e tipi di consiglio'],
     ['impostazioni', 'Impostazioni', 'Profilo, preferenze, aspetto, promemoria, regole'],
     ['backup', 'Backup', 'Esporta, importa, backup cifrato, CSV'],

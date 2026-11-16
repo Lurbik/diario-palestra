@@ -5,7 +5,7 @@ import type { EquipmentKind, Exercise, LoadConvention, MovementPattern, Muscle }
 import { EQ_LABEL } from '../ui/labels';
 export { EQ_LABEL };
 
-export const EXERCISE_CATALOG_VERSION = 3;
+export const EXERCISE_CATALOG_VERSION = 4;
 
 type Cls = Exercise['policyClass'];
 const X = (
@@ -18,6 +18,8 @@ const X = (
   sources: ['Testo originale dell\'app (istruzioni generali)']
 });
 
+/** Completa una voce con i campi editoriali e l'unità di misura (default: ripetizioni). */
+const E = (e: Exercise, ed: Pick<Exercise, 'whenToChoose' | 'whenToMove' | 'comparisonLimits' | 'alternatives'>, measure: Exercise['measure'] = 'reps'): Exercise => ({ ...e, ...ed, measure });
 
 export const EXERCISE_CATALOG: Exercise[] = [
   // ---- Spinta orizzontale (petto)
@@ -296,10 +298,10 @@ export const EXERCISE_CATALOG: Exercise[] = [
     'Appeso alla sbarra o con i gomiti su una postazione dedicata.',
     ['Porta le ginocchia verso il petto arrotolando il bacino.', 'Scendi lentamente.', 'Evita oscillazioni.'],
     ['Dondolare.', 'Sollevare solo le gambe senza bacino.']),
-  X('plank', 'Plank', ['plank frontale'], 'stabilizzazione', 'corpo_libero', ['addome'], [], 'bodyweight_added', 'calves_abs', 1, false,
+  ({ ...X('plank', 'Plank', ['plank frontale'], 'stabilizzazione', 'corpo_libero', ['addome'], [], 'bodyweight_added', 'calves_abs', 1, false,
     'Avambracci a terra, corpo in linea.',
-    ['Mantieni la posizione respirando.', 'Glutei e addome attivi.', 'Registra i secondi nelle note se utile.'],
-    ['Bacino troppo alto o troppo basso.', 'Trattenere il respiro.']),
+    ['Mantieni la posizione respirando.', 'Glutei e addome attivi.', 'Registra i secondi di tenuta: l\'app li conta al posto delle ripetizioni.'],
+    ['Bacino troppo alto o troppo basso.', 'Trattenere il respiro.']), measure: 'seconds' as const }),
   X('dead_bug', 'Dead bug', ['dead bug'], 'stabilizzazione', 'corpo_libero', ['addome'], [], 'bodyweight_added', 'calves_abs', 1, true,
     'Supino, braccia verso il soffitto, anche e ginocchia a 90°.',
     ['Allunga un braccio e la gamba opposta.', 'Mantieni la schiena appoggiata.', 'Torna e alterna.'],
@@ -324,5 +326,66 @@ export const EXERCISE_CATALOG: Exercise[] = [
   X('crunch_allungamento', 'Crunch in allungamento su panca declinata', ['crunch con carico a braccia tese'], 'addome', 'corpo_libero', ['addome'], [], 'bodyweight_added', 'calves_abs', 2, false,
     'Su panca declinata con piedi bloccati, schiena che parte in leggera estensione; carico facoltativo tenuto a braccia tese.',
     ['Parti dalla posizione allungata con la schiena appoggiata.', 'Arrotola il busto portando le costole verso il bacino.', 'Torna lentamente alla posizione allungata.', 'Registra il carico come zavorra (kg tenuti in mano).'],
-    ['Tirare con le anche invece di arrotolare il busto.', 'Usare lo slancio delle braccia.'])
+    ['Tirare con le anche invece di arrotolare il busto.', 'Usare lo slancio delle braccia.']),
+  // ---- Lotto 2026-11: varianti con differenza concreta (proposte editoriali, testo originale dell'app)
+  E(X('high_row', 'High row alla macchina', ['high row', 'iso-lateral high row'], 'tirata_orizzontale', 'macchina', ['dorsali', 'schiena_alta'], ['bicipiti', 'deltoidi_posteriori'], 'plates_per_side', 'compound', 1, false,
+    'Regola il sedile in modo che le maniglie siano poco sopra l\'altezza delle spalle; petto contro il supporto.',
+    ['Tira i gomiti in basso e indietro, verso i fianchi.', 'Torna lentamente fino a sentire l\'allungamento sotto le ascelle.', 'Mantieni il petto appoggiato per tutta la serie.'],
+    ['Staccare il petto dal supporto per aiutarsi con il busto.', 'Accorciare la risalita perdendo l\'allungamento.']),
+    { whenToChoose: 'Quando vuoi una tirata con traiettoria dall\'alto stabile e facile da progredire, a metà tra lat machine e rematore.', whenToMove: 'Prima della lat machine se i dorsali sono la priorità del giorno; dopo, se la priorità è la trazione verticale.', comparisonLimits: 'Ogni macchina ha leve e incrementi propri: non confrontare i kg con pulley o lat machine. Altezza della presa e sedile fanno parte della configurazione.', alternatives: ['cx_lat_larga', 'cx_pulldown_unil', 'cx_row_macchina'] }),
+  E(X('low_row_indip', 'Low row convergente a bracci indipendenti', ['low row', 'rematore basso convergente'], 'tirata_orizzontale', 'macchina', ['schiena_alta', 'dorsali'], ['bicipiti', 'deltoidi_posteriori'], 'plates_per_side', 'compound', 1, false,
+    'Sedile alto quanto basta per avere le maniglie all\'altezza dell\'ombelico; petto appoggiato.',
+    ['Tira i gomiti indietro vicino al corpo.', 'Rilascia lentamente lasciando avanzare le scapole.', 'Se lavori un braccio alla volta, completa tutte le ripetizioni di un lato prima dell’altro.'],
+    ['Strattonare con la schiena.', 'Ruotare il busto quando si lavora con un braccio.']),
+    { whenToChoose: 'Per lavorare un lato alla volta con il petto in appoggio: utile se un lato è più debole o se vuoi meno carico sulla zona lombare.', whenToMove: 'Indifferente: di solito dopo la tirata verticale del giorno.', comparisonLimits: 'Annota se lavori a due braccia o a un braccio: sono configurazioni diverse. Registra lato, sedile e macchina.', alternatives: ['cx_row_macchina', 'cx_row_cavo_unil', 'cx_tbar'] }),
+  E(X('pullover_man', 'Pullover con manubrio su panca', ['pullover manubrio'], 'tirata_verticale', 'manubri', ['dorsali'], ['petto', 'tricipiti'], 'per_dumbbell', 'isolation', 2, false,
+    'Schiena appoggiata sulla panca, un manubrio tenuto con entrambe le mani sopra il petto.',
+    ['Con i gomiti leggermente piegati porta il manubrio dietro la testa fino a un allungamento controllato.', 'Riporta il manubrio sopra il petto senza piegare di più i gomiti.', 'Mantieni il bacino appoggiato e il respiro regolare.'],
+    ['Inarcare molto la schiena per scendere di più.', 'Trasformarlo in un\'estensione dei tricipiti.']),
+    { whenToChoose: 'Quando vuoi lavorare i dorsali in allungamento senza macchine; utile a casa con un solo manubrio.', whenToMove: 'Di solito dopo le tirate principali.', comparisonLimits: 'Registra il peso del singolo manubrio. Se la spalla limita l\'escursione, una profondità diversa interrompe il confronto.', alternatives: ['cx_pullover_cavo', 'cx_lat_larga'] }),
+  E(X('landmine_press', 'Landmine press a un braccio', ['landmine press'], 'spinta_verticale', 'bilanciere', ['deltoidi_anteriori', 'petto'], ['tricipiti', 'addome'], 'plates_total', 'compound', 2, true,
+    'Un\'estremità del bilanciere nell\'apposito supporto o in un angolo protetto; in piedi o in ginocchio, l\'altra estremità all\'altezza della spalla.',
+    ['Spingi in avanti e in alto fino a braccio quasi teso.', 'Torna controllando fino alla spalla.', 'Completa le ripetizioni di un lato, poi cambia.'],
+    ['Inclinare il busto all\'indietro.', 'Ruotare il bacino per aiutarsi.']),
+    { whenToChoose: 'Quando la spinta sopra la testa dà fastidio o non è disponibile: la traiettoria diagonale è spesso più tollerata.', whenToMove: 'Come prima spinta del giorno se è la priorità, altrimenti dopo la spinta orizzontale.', comparisonLimits: 'Il carico percepito dipende da lunghezza della barra e posizione: registra i dischi caricati e la posizione (in piedi o in ginocchio); non confrontare con la military.', alternatives: ['cx_military_man', 'cx_shoulder_press', 'cx_panca_incl_man'] }),
+  E(X('leg_curl_piedi', 'Leg curl in piedi unilaterale', ['leg curl in piedi', 'standing leg curl'], 'flessione_ginocchio', 'macchina', ['femorali'], ['polpacci'], 'machine_stack', 'isolation', 1, true,
+    'Ginocchio allineato al perno della macchina, rullo appena sopra il tallone.',
+    ['Piega il ginocchio portando il tallone verso il gluteo.', 'Torna lentamente fino a gamba quasi tesa.', 'Completa un lato, poi cambia gamba.'],
+    ['Spostare l\'anca in avanti.', 'Accorciare la discesa.']),
+    { whenToChoose: 'Per allenare i femorali una gamba alla volta, ad esempio se le due gambe differiscono.', whenToMove: 'Dopo gli esercizi multiarticolari; prima se i femorali sono la priorità della seduta.', comparisonLimits: 'Registra destra e sinistra separatamente. Non confrontare i kg con il leg curl seduto o sdraiato.', alternatives: ['cx_leg_curl_seduto', 'cx_leg_curl_sdraiato', 'cx_nordic'] }),
+  E(X('split_squat', 'Split squat statico con manubri', ['split squat'], 'accosciata', 'manubri', ['quadricipiti', 'glutei'], ['adduttori'], 'per_dumbbell', 'compound', 2, true,
+    'In piedi a passo lungo, piede posteriore a terra (non rialzato), un manubrio per mano.',
+    ['Scendi in verticale piegando entrambe le ginocchia.', 'Risali spingendo sul piede anteriore.', 'Completa le ripetizioni di un lato, poi inverti le gambe.'],
+    ['Spostare il peso sulla gamba dietro.', 'Ginocchio anteriore che collassa verso l\'interno.']),
+    { whenToChoose: 'Come variante più stabile del bulgaro: piede posteriore a terra, equilibrio più facile.', whenToMove: 'Come primo esercizio per le gambe a casa; dopo hack o pressa in palestra.', comparisonLimits: 'Distinto dal bulgaro (piede rialzato): sono configurazioni diverse. Registra il peso di un manubrio e le ripetizioni per lato.', alternatives: ['cx_bulgaro', 'cx_affondi', 'cx_goblet_squat'] }),
+  E(X('step_up', 'Step-up con manubri', ['step up', 'salite sul gradino'], 'accosciata', 'manubri', ['quadricipiti', 'glutei'], ['polpacci'], 'per_dumbbell', 'compound', 2, true,
+    'Panca o gradino stabile; un manubrio per mano.',
+    ['Appoggia tutto il piede sul rialzo e sali spingendo con quella gamba.', 'Scendi controllando senza saltare.', 'Completa un lato, poi cambia gamba.'],
+    ['Spingere con la gamba a terra.', 'Rialzo instabile o troppo alto per controllare la discesa.']),
+    { whenToChoose: 'Quando vuoi un esercizio unilaterale semplice da caricare con poco spazio.', whenToMove: 'Dopo l\'esercizio principale di gambe.', comparisonLimits: 'L\'altezza del rialzo fa parte della configurazione: annotala. Kg per manubrio, ripetizioni per lato.', alternatives: ['cx_bulgaro', 'cx_affondi'] }),
+  E(X('rear_fly_cavi', 'Aperture posteriori ai cavi', ['reverse fly ai cavi', 'croci inverse ai cavi'], 'deltoidi_posteriori', 'cavo', ['deltoidi_posteriori'], ['schiena_alta'], 'cable_stack', 'isolation', 1, false,
+    'Due cavi incrociati all\'altezza delle spalle (impugna il cavo sinistro con la mano destra e viceversa).',
+    ['Apri le braccia all\'indietro e lateralmente con gomiti morbidi.', 'Torna lentamente incrociando davanti a te.', 'Mantieni il busto fermo per tutta la serie.'],
+    ['Tirare con i gomiti piegati come in un rematore.', 'Inarcare la schiena.']),
+    { whenToChoose: 'Per lavoro diretto sui deltoidi posteriori con tensione costante; alternativa alla reverse pec deck.', whenToMove: 'Di solito a fine seduta; può essere anticipato se i deltoidi posteriori sono una priorità.', comparisonLimits: 'Registra altezza dei cavi e presa. Il rapporto delle carrucole cambia tra stazioni: non confrontare i kg tra cavi diversi.', alternatives: ['cx_reverse_pec', 'cx_alzate_post_man', 'cx_face_pull'] }),
+  E(X('curl_inclinata', 'Curl alternato su panca inclinata', ['incline curl'], 'bicipiti', 'manubri', ['bicipiti'], ['avambracci'], 'per_dumbbell', 'isolation', 2, true,
+    'Panca inclinata (circa 45–60°), braccia lasciate pendere dietro la linea del busto.',
+    ['Fletti il gomito senza portarlo in avanti.', 'Scendi lentamente fino al braccio disteso.', 'Alterna le braccia e conta le ripetizioni per lato.'],
+    ['Portare la spalla in avanti per accorciare il movimento.', 'Usare lo slancio.']),
+    { whenToChoose: 'Quando vuoi allenare i bicipiti con la spalla estesa, cioè con il muscolo più allungato.', whenToMove: 'A fine seduta, dopo le tirate.', comparisonLimits: 'L\'inclinazione della panca fa parte della configurazione; carico per manubrio, ripetizioni per lato.', alternatives: ['cx_curl_cavo_bayes', 'cx_curl_man', 'cx_curl_scott'] }),
+  E(X('farmer_walk', 'Camminata con manubri (farmer walk)', ['farmer walk', 'farmer carry'], 'stabilizzazione', 'manubri', ['avambracci'], ['schiena_alta', 'addome', 'glutei'], 'per_dumbbell', 'compound', 1, false,
+    'Un manubrio pesante per mano, spazio libero e pavimento non scivoloso.',
+    ['Cammina a passi brevi con busto dritto e spalle basse.', 'Appoggia i manubri piegando le gambe, non la schiena.', 'Registra metri percorsi e kg per mano.'],
+    ['Lasciare cadere i manubri.', 'Inclinarsi da un lato.']),
+    { whenToChoose: 'Per presa, stabilità del tronco e lavoro generale; si registrano metri (o secondi) e kg per mano.', whenToMove: 'A fine seduta: la presa affaticata peggiora le tirate successive.', comparisonLimits: 'Si confrontano solo stessi kg e stessa unità (metri o secondi): niente progressione a ripetizioni.', alternatives: ['cx_plank'] }, 'meters'),
+  E(X('side_plank', 'Plank laterale', ['side plank'], 'stabilizzazione', 'corpo_libero', ['addome'], ['abduttori'], 'bodyweight_added', 'calves_abs', 1, true,
+    'Su un avambraccio, gomito sotto la spalla, corpo in linea.',
+    ['Solleva il bacino e mantieni la posizione respirando.', 'Ripeti dall\'altro lato.', 'Registra i secondi per lato.'],
+    ['Bacino che scende.', 'Ruotare il busto in avanti.']),
+    { whenToChoose: 'Per la stabilità laterale del tronco; si registrano i secondi per lato.', whenToMove: 'A fine seduta o nei giorni di riposo.', comparisonLimits: 'Variante con ginocchia a terra o con zavorra = configurazione diversa.', alternatives: ['cx_plank', 'cx_dead_bug'] }, 'seconds'),
+  E(X('extrarotazione_cavo', 'Extrarotazione al cavo a gomito vicino al fianco', ['extrarotazione', 'rotazione esterna al cavo'], 'altro', 'cavo', ['cuffia_rotatori'], ['deltoidi_posteriori'], 'cable_stack', 'calves_abs', 1, true,
+    'Cavo all\'altezza del gomito, un asciugamano arrotolato tra gomito e fianco.',
+    ['Ruota l\'avambraccio verso l\'esterno tenendo il gomito fermo al fianco.', 'Torna lentamente.', 'Usa carichi che permettono di tenere il gomito fermo.'],
+    ['Staccare il gomito dal fianco.', 'Usare carichi che costringono a ruotare il busto.']),
+    { whenToChoose: 'Come esercizio accessorio per i rotatori esterni della spalla. Non è una terapia: per un dolore alla spalla serve una valutazione qualificata.', whenToMove: 'A inizio o fine seduta, con carichi leggeri.', comparisonLimits: 'Carichi piccoli e rapporto delle carrucole ignoto: confronta solo sullo stesso cavo e alla stessa altezza.', alternatives: ['cx_face_pull'] })
 ];

@@ -1,3 +1,4 @@
+import { weightConfounders } from '../lib/supplements';
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, kvSet } from '../db/db';
@@ -42,6 +43,9 @@ function WeightTab() {
   const diary14 = useLiveQuery(() => db.diary.where('dateKey').between(from14, today, true, true).toArray(), [from14, today]) ?? [];
   const [sheet, setSheet] = useState<null | 'weight' | 'target' | 'waist'>(null);
   const [waistCm, setWaistCm] = useState<number | null>(null);
+  // Periodi in cui il peso non è interpretabile per le calorie (es. prime 4 settimane di creatina)
+  const suppLog = (useLiveQuery(() => db.kv.get('supplementLog'), [])?.value as { id: string; start: string }[] | undefined) ?? [];
+  const confounders = weightConfounders(suppLog, addDays);
   const completeDays = completeRows.filter((r) => r.value === true).map((r) => r.key.split(':')[1]);
   const daily = dailyWeights(weights);
   const ma = movingAverage(daily, 7);
@@ -49,7 +53,7 @@ function WeightTab() {
   // Solo giorni dichiarati completi con tutte le kcal note: mancante ≠ zero, giorno vuoto ≠ 0 kcal.
   const intake = intakeStats(diary14, completeDays, from14, today);
   const avgIntake = intake.avgKcal;
-  const proposal = proposeCalories({ weights, completeDiaryDays: intake.usableDays, avgIntakeKcal: avgIntake, targetKcal: target?.kcal ?? null, lastTargetChange: target ? target.effectiveFrom : null, today, rules: settings.calorieRules, goal: settings.profile.goal ?? undefined });
+  const proposal = proposeCalories({ weights, completeDiaryDays: intake.usableDays, avgIntakeKcal: avgIntake, targetKcal: target?.kcal ?? null, lastTargetChange: target ? target.effectiveFrom : null, today, rules: settings.calorieRules, goal: settings.profile.goal ?? undefined, confounders });
   const q = dataQuality(weights, intake.usableDays, today, settings.calorieRules);
   const lastKg = daily.at(-1)?.kg ?? settings.profile.declaredWeightKg;
   const ref = lastKg ? proteinReference(lastKg) : null;

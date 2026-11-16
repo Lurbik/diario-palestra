@@ -7,11 +7,13 @@ export type DateKey = string; // 'YYYY-MM-DD' calcolata in Europe/Rome
 export type Muscle =
   | 'petto' | 'dorsali' | 'schiena_alta' | 'deltoidi_anteriori' | 'deltoidi_laterali' | 'deltoidi_posteriori'
   | 'bicipiti' | 'tricipiti' | 'avambracci' | 'quadricipiti' | 'femorali' | 'glutei' | 'adduttori'
-  | 'polpacci' | 'addome' | 'lombari' | 'abduttori';
+  | 'polpacci' | 'addome' | 'lombari' | 'abduttori'
+  /** muscoli profondi: nessuna zona superficiale sulla mappa, solo scheda testuale */
+  | 'cuffia_rotatori';
 
 /** Provenienza di un record: catalogo pubblico, creato dall'utente, seed di versioni precedenti, importazione privata. */
 export type Origin = 'catalog' | 'user' | 'legacy_seed' | 'private_import';
-export interface CatalogMeta { origin?: Origin; catalogVersion?: number; userModified?: boolean; archived?: boolean }
+export interface CatalogMeta { origin?: Origin; catalogVersion?: number; userModified?: boolean; archived?: boolean; /** voce di catalogo ritirata: ID della voce che la sostituisce */ replacedBy?: string }
 
 /** Convenzione del carico. Convenzioni diverse non si sommano né si confrontano. */
 export type LoadConvention =
@@ -83,6 +85,13 @@ export interface Exercise extends CatalogMeta {
   commonErrors?: string[];
   favorite?: boolean;
   sources?: string[];
+  /** Cosa si registra in ogni serie: ripetizioni (default), secondi o metri. */
+  measure?: 'reps' | 'seconds' | 'meters';
+  /** Campi editoriali: quando sceglierlo, quando anticiparlo/posticiparlo, cosa interrompe il confronto. */
+  whenToChoose?: string;
+  whenToMove?: string;
+  comparisonLimits?: string;
+  alternatives?: string[];
 }
 
 export interface RirTarget { min: number; max: number }

@@ -24,7 +24,16 @@ export function toFood(i: CatalogFoodItem, version: number): Food {
   };
 }
 
-export interface Catalog { version: number; exercises: Exercise[]; foods: Food[]; recipes: Recipe[]; templates: Program[]; unresolved: string[]; foodMeta: Record<string, unknown> }
+export interface Catalog {
+  version: number;
+  /**
+   * Identificativo della release: una versione PER catalogo. Basta che UNA cambi perché il dispositivo
+   * reimporti (il massimo delle versioni non basta: un catalogo 2→3 con massimo già 3 verrebbe saltato).
+   */
+  release: string;
+  exercises: Exercise[]; foods: Food[]; recipes: Recipe[]; templates: Program[]; unresolved: string[]; foodMeta: Record<string, unknown>;
+  retiredRecipes: Record<string, string>;
+}
 
 export async function loadCatalog(): Promise<Catalog> {
   const [ex, rec, tpl, foodsJson] = await Promise.all([
@@ -36,8 +45,21 @@ export async function loadCatalog(): Promise<Catalog> {
   const { recipes, unresolved } = rec.buildRecipeCatalog(slugToId);
   return {
     version: Math.max(ex.EXERCISE_CATALOG_VERSION, rec.RECIPE_CATALOG_VERSION, fj.meta.version, tpl.TEMPLATE_VERSION),
-    exercises: ex.EXERCISE_CATALOG, foods, recipes, templates: tpl.templatesV2(), unresolved, foodMeta: fj.meta
+    release: releaseId({ exercises: ex.EXERCISE_CATALOG_VERSION, recipes: rec.RECIPE_CATALOG_VERSION, foods: fj.meta.version, templates: tpl.TEMPLATE_VERSION }),
+    exercises: ex.EXERCISE_CATALOG, foods, recipes, templates: tpl.templatesV2(), unresolved, foodMeta: fj.meta, retiredRecipes: rec.RETIRED_RECIPES
   };
+}
+
+export const releaseId = (v: { exercises: number; recipes: number; foods: number; templates: number }) => `e${v.exercises}-r${v.recipes}-f${v.foods}-t${v.templates}`;
+
+/** Archivia (non cancella) le voci di catalogo ritirate, salvo quelle modificate dall'utente. */
+export async function retireCatalogItems(table: TableLike & { update(id: string, p: object): Promise<unknown> }, retired: Record<string, string>) {
+  let n = 0;
+  for (const [id, replacedBy] of Object.entries(retired)) {
+    const cur = await table.get(id);
+    if (cur && cur.origin === 'catalog' && !cur.userModified && !cur.archived) { await table.update(id, { archived: true, replacedBy }); n++; }
+  }
+  return n;
 }
 
 interface Upsertable { id: string; origin?: string; userModified?: boolean; catalogVersion?: number }

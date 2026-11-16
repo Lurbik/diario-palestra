@@ -17,13 +17,17 @@ export const CONVENTION_LABEL: Record<LoadConvention, string> = {
 export const MUSCLE_LABEL: Record<Muscle, string> = {
   petto: 'Petto', dorsali: 'Dorsali', schiena_alta: 'Schiena alta', deltoidi_anteriori: 'Deltoidi anteriori', deltoidi_laterali: 'Deltoidi laterali',
   deltoidi_posteriori: 'Deltoidi posteriori', bicipiti: 'Bicipiti', tricipiti: 'Tricipiti', avambracci: 'Avambracci', quadricipiti: 'Quadricipiti',
-  femorali: 'Femorali', glutei: 'Glutei', adduttori: 'Adduttori', polpacci: 'Polpacci', addome: 'Addome', lombari: 'Lombari', abduttori: 'Abduttori'
+  femorali: 'Femorali', glutei: 'Glutei', adduttori: 'Adduttori', polpacci: 'Polpacci', addome: 'Addome', lombari: 'Lombari', abduttori: 'Abduttori',
+  cuffia_rotatori: 'Cuffia dei rotatori (profondo)'
 };
+/** Etichetta dell'unità registrata per serie. */
+export const MEASURE_LABEL = { reps: 'Complete', seconds: 'Secondi', meters: 'Metri' } as const;
+export const MEASURE_UNIT = { reps: '', seconds: ' s', meters: ' m' } as const;
 export const ALL_MUSCLES = Object.keys(MUSCLE_LABEL) as Muscle[];
 
 export function describeSet(s: SetEntry): string {
   const parts: string[] = [];
-  parts.push(`${s.load == null ? '— kg' : fmtNum(s.load, 2) + ' kg'} × ${s.fullReps}${s.unilateral ? '/lato' : ''}`);
+  parts.push(`${s.load == null ? '— kg' : fmtNum(s.load, 2) + ' kg'} × ${s.fullReps}${s.unilateral ? '/lato' : ''}`); // per secondi/metri l'unità è indicata dall'esercizio
   if (s.fullRepsOtherSide != null) parts.push(`altro lato ${s.fullRepsOtherSide}`);
   parts.push(s.validReps == null ? 'conformità non valutata' : s.validReps === s.fullReps ? 'tutte conformi' : `${s.validReps} conformi`);
   parts.push(s.rir != null ? `RIR ${s.rir}` : s.rirUnknown ? 'RIR non so' : 'RIR —');

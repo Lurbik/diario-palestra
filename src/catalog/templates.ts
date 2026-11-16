@@ -2,7 +2,7 @@
 import type { Program } from '../db/types';
 import type { EquipmentAccess, Experience } from '../db/settings';
 
-export const TEMPLATE_VERSION = 2;
+export const TEMPLATE_VERSION = 3;
 
 type Row = [exercise: string, sets: number, repMin: number, repMax: number];
 interface T { id: string; name: string; days: number; equipment: EquipmentAccess; level: Experience[]; minutes: number; plan: [string, Row[]][] }
@@ -27,14 +27,51 @@ const DEF: T[] = [
     ['Legs', [['leg_press', 3, 8, 12], ['leg_curl_seduto', 3, 10, 15], ['bulgaro', 2, 8, 12], ['crunch_cavo', 2, 10, 15]]]
   ] },
   { id: 'casa3', name: 'Full-body 3 giorni (manubri a casa)', days: 3, equipment: 'casa_manubri', level: ['principiante', 'intermedio', 'esperto'], minutes: 45, plan: [
-    ['Casa A', [['goblet_squat', 3, 8, 15], ['panca_piana_man', 3, 8, 12], ['rematore_man', 3, 8, 12], ['alzate_lat_man', 2, 12, 20], ['plank', 2, 1, 1]]],
+    ['Casa A', [['goblet_squat', 3, 8, 15], ['panca_piana_man', 3, 8, 12], ['rematore_man', 3, 8, 12], ['alzate_lat_man', 2, 12, 20], ['plank', 2, 20, 45]]],
     ['Casa B', [['rdl_man', 3, 8, 12], ['military_man', 3, 8, 12], ['piegamenti', 2, 6, 15], ['curl_martello', 2, 10, 15], ['dead_bug', 2, 8, 12]]],
     ['Casa C', [['bulgaro', 3, 8, 12], ['panca_incl_man', 3, 8, 12], ['rematore_man', 3, 8, 12], ['alzate_post_man', 2, 12, 20], ['ponte_glutei', 2, 10, 20]]]
   ] },
   { id: 'corpo3', name: 'Full-body 3 giorni (corpo libero)', days: 3, equipment: 'corpo_libero', level: ['principiante', 'intermedio'], minutes: 35, plan: [
-    ['Corpo A', [['piegamenti', 3, 6, 15], ['inverted_row', 3, 6, 12], ['ponte_glutei', 3, 10, 20], ['plank', 2, 1, 1]]],
+    ['Corpo A', [['piegamenti', 3, 6, 15], ['inverted_row', 3, 6, 12], ['ponte_glutei', 3, 10, 20], ['plank', 2, 20, 45]]],
     ['Corpo B', [['dip_panca', 3, 6, 15], ['trazioni', 3, 3, 8], ['dead_bug', 2, 8, 12], ['ponte_glutei', 2, 10, 20]]],
-    ['Corpo C', [['piegamenti', 3, 6, 15], ['inverted_row', 3, 6, 12], ['leg_raise', 2, 6, 12], ['plank', 2, 1, 1]]]
+    ['Corpo C', [['piegamenti', 3, 6, 15], ['inverted_row', 3, 6, 12], ['leg_raise', 2, 6, 12], ['plank', 2, 20, 45]]]
+  ] },
+  // ---- Lotto 2026-11: strutture da 2 a 6 giorni (proposte editoriali completate con serie, range e recuperi).
+  // Volume per muscolo volutamente moderato nelle versioni brevi: il rapporto dose-risposta è graduale
+  // (Pelland 2025) e una scheda che entra nella settimana vale più di una ottimale che si salta.
+  { id: 'full2', name: 'Full body A/B su 2 giorni (palestra)', days: 2, equipment: 'palestra', level: ['principiante', 'intermedio'], minutes: 60, plan: [
+    ['Full body A', [['leg_press', 3, 8, 12], ['chest_press', 3, 8, 12], ['lat_larga', 3, 8, 12], ['leg_curl_seduto', 3, 10, 15], ['alzate_lat_cavo', 3, 12, 20]]],
+    ['Full body B', [['hack_squat', 3, 6, 10], ['panca_incl_man', 3, 8, 12], ['pulley', 3, 8, 12], ['rdl_man', 3, 8, 12], ['crunch_cavo', 2, 10, 15]]]
+  ] },
+  { id: 'casa2', name: 'Casa con manubri, 2 giorni', days: 2, equipment: 'casa_manubri', level: ['principiante', 'intermedio', 'esperto'], minutes: 45, plan: [
+    ['Casa A', [['goblet_squat', 3, 8, 15], ['piegamenti', 3, 6, 15], ['rematore_man', 3, 8, 12], ['rdl_man', 3, 8, 12], ['dead_bug', 2, 8, 12]]],
+    ['Casa B', [['affondi', 3, 8, 12], ['military_man', 3, 8, 12], ['rematore_man', 3, 8, 12], ['ponte_glutei', 3, 10, 20], ['curl_martello', 2, 10, 15]]]
+  ] },
+  { id: 'macchine3', name: 'Macchine essenziali, 3 sedute brevi', days: 3, equipment: 'palestra', level: ['principiante'], minutes: 35, plan: [
+    ['Macchine A', [['leg_press', 3, 8, 12], ['chest_press', 3, 8, 12], ['lat_larga', 3, 8, 12]]],
+    ['Macchine B', [['leg_curl_seduto', 3, 10, 15], ['shoulder_press', 3, 8, 12], ['pulley', 3, 8, 12]]],
+    ['Macchine C', [['hack_squat', 3, 8, 12], ['chest_press_incl', 3, 8, 12], ['row_macchina', 3, 8, 12]]]
+  ] },
+  { id: 'ul4breve', name: 'Upper/Lower compatto, 4 giorni', days: 4, equipment: 'palestra', level: ['intermedio', 'esperto'], minutes: 40, plan: [
+    ['Upper A', [['chest_press_incl', 3, 6, 10], ['lat_larga', 3, 8, 12], ['alzate_lat_cavo', 3, 12, 20]]],
+    ['Lower A', [['hack_squat', 3, 6, 10], ['leg_curl_seduto', 3, 10, 15], ['calf_pressa', 3, 10, 15]]],
+    ['Upper B', [['panca_incl_mp', 3, 6, 10], ['tbar', 3, 8, 12], ['reverse_pec', 3, 12, 20]]],
+    ['Lower B', [['rdl_bil', 3, 6, 10], ['leg_ext', 3, 10, 15], ['crunch_cavo', 3, 10, 15]]]
+  ] },
+  { id: 'rot5', name: 'Cinque sedute in rotazione: torso, gambe A, spalle/braccia, gambe B, upper', days: 5, equipment: 'palestra', level: ['intermedio', 'esperto'], minutes: 60, plan: [
+    ['Torso', [['chest_press_incl', 3, 6, 10], ['pulldown_unil', 3, 8, 12], ['pec_deck', 2, 10, 15], ['tbar', 3, 8, 12]]],
+    ['Gambe A', [['hack_squat', 3, 6, 10], ['leg_curl_seduto', 3, 10, 15], ['leg_ext', 2, 10, 15], ['calf_pressa', 3, 10, 15], ['crunch_allungamento', 2, 8, 15]]],
+    ['Spalle e braccia', [['military_mp', 3, 6, 10], ['curl_scott', 2, 8, 12], ['estensione_cavo_testa', 2, 10, 15], ['alzate_lat_panca', 3, 12, 20], ['reverse_pec', 2, 12, 20]]],
+    ['Gambe B', [['rdl_bil', 3, 6, 10], ['leg_ext', 2, 10, 15], ['leg_curl_sdraiato', 3, 10, 15], ['calf_pressa', 3, 10, 15], ['crunch_cavo', 2, 10, 15]]],
+    ['Upper', [['panca_incl_mp', 3, 6, 10], ['lat_larga', 3, 8, 12], ['curl_cavo_bayes', 2, 10, 15], ['jm_press_mp', 2, 8, 12], ['alzate_lat_man', 3, 12, 20]]]
+  ] },
+  { id: 'ppl6', name: 'Push/Pull/Legs A/B, 6 sedute brevi', days: 6, equipment: 'palestra', level: ['intermedio', 'esperto'], minutes: 45, plan: [
+    ['Push A', [['chest_press_incl', 3, 6, 10], ['shoulder_press', 3, 8, 12], ['pushdown', 3, 10, 15]]],
+    ['Pull A', [['lat_larga', 3, 8, 12], ['tbar', 3, 8, 12], ['curl_scott', 3, 8, 12]]],
+    ['Legs A', [['hack_squat', 3, 6, 10], ['leg_curl_seduto', 3, 10, 15], ['calf_pressa', 3, 10, 15]]],
+    ['Push B', [['chest_press', 3, 8, 12], ['alzate_lat_cavo', 3, 12, 20], ['estensione_cavo_testa', 3, 10, 15]]],
+    ['Pull B', [['pulley', 3, 8, 12], ['pulldown_unil', 2, 8, 12], ['reverse_pec', 3, 12, 20], ['curl_martello', 2, 10, 15]]],
+    ['Legs B', [['rdl_man', 3, 8, 12], ['leg_press', 3, 8, 12], ['leg_ext', 2, 10, 15], ['crunch_cavo', 2, 10, 15]]]
   ] }
 ];
 
@@ -48,7 +85,8 @@ export function templatesV2(): Program[] {
       id: `tpl2_${t.id}_d${i}`, name, weekday: WEEKDAYS[t.days]?.[i] ?? null,
       items: rows.map(([ex, s, a, b], j) => ({
         id: `tpl2_${t.id}_d${i}_${j}`, exerciseId: `cx_${ex}`, sets: s, repMin: a, repMax: b, rirTargets: Array.from({ length: s }, () => ({ min: 1, max: 3 })),
-        restSec: 150, declaredLoad: '', declaredNotes: '', toConfirm: [], priority: j + 1, sameAs: ''
+        // recupero di partenza: più lungo per i multiarticolari a ripetizioni basse (Singer 2024: recuperi brevi non aiutano l'ipertrofia)
+        restSec: a >= 10 ? 90 : 150, declaredLoad: '', declaredNotes: '', toConfirm: [], priority: j + 1, sameAs: ''
       }))
     }))
   }));

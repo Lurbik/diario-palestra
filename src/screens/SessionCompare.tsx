@@ -7,16 +7,16 @@ import type { Exercise, Machine, SessionItem, SetEntry } from '../db/types';
 import type { Exposure } from '../lib/progression';
 import type { FormState } from './Session';
 import { Check, Chip, Field, Icon, NumInput } from '../ui/kit';
-import { CONVENTION_LABEL, totalLoadNote } from '../ui/labels';
+import { CONVENTION_LABEL, MEASURE_LABEL, MEASURE_UNIT, totalLoadNote } from '../ui/labels';
 import { formatDateIt } from '../lib/dates';
 import { fmtNum } from '../lib/id';
 
 export type CompareField = 'load' | 'reps' | 'part' | 'rir';
 
 const rirText = (rir: number | null, unknown: boolean) => (unknown ? 'RIR non so' : rir == null ? 'RIR —' : `RIR ${rir}`);
-function cellText(load: number | null, reps: number | null, part: number, rir: number | null, rirUnknown: boolean, unilateral: boolean) {
+function cellText(load: number | null, reps: number | null, part: number, rir: number | null, rirUnknown: boolean, unilateral: boolean, unit = '') {
   return {
-    main: `${load == null ? '— kg' : `${fmtNum(load, 2)} kg`} × ${reps == null ? '—' : reps}${unilateral ? '/lato' : ''}`,
+    main: `${load == null ? '— kg' : `${fmtNum(load, 2)} kg`} × ${reps == null ? '—' : reps + unit}${unilateral ? '/lato' : ''}`,
     sub: `${part ? `+${part} parziali` : '0 parziali'} · ${rirText(rir, rirUnknown)}`
   };
 }
@@ -26,6 +26,9 @@ export function CompareEntry({ form, setForm, ex, machine, loadStep, item, prev,
   prev: Exposure | null | undefined; itemSets: SetEntry[]; field: CompareField; setField: (f: CompareField) => void; onEdit: (s: SetEntry) => void;
 }) {
   const up = (p: Partial<FormState>) => setForm({ ...form, ...p });
+  // Unità registrata per serie: ripetizioni, secondi (plank) o metri (camminate)
+  const measure = ex.measure ?? 'reps';
+  const unit = MEASURE_UNIT[measure];
   const prevW = prev ? prev.sets.filter((s) => s.kind === 'working').sort((a, b) => a.order - b.order) : [];
   const doneW = itemSets.filter((s) => s.kind === 'working');
   const warm = itemSets.filter((s) => s.kind === 'warmup');
@@ -56,7 +59,9 @@ export function CompareEntry({ form, setForm, ex, machine, loadStep, item, prev,
   const bump = (dir: 1 | -1) => {
     if (field === 'reps' && form.fullReps == null) { up({ fullReps: dir > 0 ? item.repMin ?? 1 : 0 }); return; }
     const cur = fieldValue ?? 0;
-    setFieldValue(Math.max(0, Math.round((cur + dir * step) * 1000) / 1000));
+    // secondi e metri avanzano di 5 alla volta; ripetizioni di 1
+    const st = field === 'reps' && measure !== 'reps' ? 5 : step;
+    setFieldValue(Math.max(0, Math.round((cur + dir * st) * 1000) / 1000));
   };
   const note = totalLoadNote(ex.loadConvention, form.load, machine);
 
@@ -75,8 +80,8 @@ export function CompareEntry({ form, setForm, ex, machine, loadStep, item, prev,
               const p = prevW[i];
               const d = doneW[i];
               const isCur = current === n;
-              const pc = p ? cellText(p.load, p.fullReps, p.extraPartials, p.rir, p.rirUnknown, p.unilateral) : null;
-              const dc = d ? cellText(d.load, d.fullReps, d.extraPartials, d.rir, d.rirUnknown, d.unilateral) : isCur ? cellText(form.load, form.fullReps, form.extraPartials ?? 0, form.rir, form.rirUnknown, ex.unilateral) : null;
+              const pc = p ? cellText(p.load, p.fullReps, p.extraPartials, p.rir, p.rirUnknown, p.unilateral, unit) : null;
+              const dc = d ? cellText(d.load, d.fullReps, d.extraPartials, d.rir, d.rirUnknown, d.unilateral, unit) : isCur ? cellText(form.load, form.fullReps, form.extraPartials ?? 0, form.rir, form.rirUnknown, ex.unilateral, unit) : null;
               return (
                 <tr key={n} className={isCur ? 'cur' : ''}>
                   <th scope="row">{n}</th>
@@ -99,12 +104,12 @@ export function CompareEntry({ form, setForm, ex, machine, loadStep, item, prev,
 
       <section aria-label={form.kind === 'warmup' ? 'Riscaldamento' : `Serie ${current}`}>
         <div className="seg" role="group" aria-label="Valore da modificare">
-          {([['load', 'Carico'], ['reps', 'Complete'], ['part', 'Parziali'], ['rir', 'RIR']] as [CompareField, string][]).map(([k, l]) => (
+          {([['load', 'Carico'], ['reps', MEASURE_LABEL[measure]], ['part', 'Parziali'], ['rir', 'RIR']] as [CompareField, string][]).filter(([k]) => measure === 'reps' || k !== 'part').map(([k, l]) => (
             <button key={k} type="button" aria-pressed={field === k} onClick={() => setField(k)}>{l}</button>
           ))}
         </div>
         <p className="small muted field-hint">
-          {field === 'load' ? CONVENTION_LABEL[ex.loadConvention] : field === 'reps' ? `Ripetizioni complete al ROM pianificato${ex.unilateral ? ', per lato' : ''}` : field === 'part' ? 'Parziali extra dopo l\'ultima completa: non contano per la progressione' : 'Ripetizioni conformi ancora possibili; "non so" non vale 0'}
+          {field === 'load' ? CONVENTION_LABEL[ex.loadConvention] : field === 'reps' ? (measure === 'seconds' ? `Secondi di tenuta${ex.unilateral ? ', per lato' : ''}` : measure === 'meters' ? 'Metri percorsi con lo stesso carico' : `Ripetizioni complete al ROM pianificato${ex.unilateral ? ', per lato' : ''}`) : field === 'part' ? 'Parziali extra dopo l\'ultima completa: non contano per la progressione' : 'Ripetizioni conformi ancora possibili; "non so" non vale 0'}
         </p>
         {field === 'rir' ? (
           <div className="chips" role="group" aria-label="RIR">

@@ -8,6 +8,7 @@ import { painSafety } from '../src/lib/safety';
 import { configKey, sessionTimes, restState, dumbbellTotal, smithTotal, tonnage } from '../src/lib/workout';
 import { EXERCISE_CATALOG } from '../src/catalog/exercises';
 import { buildRecipeCatalog, RECIPE_COUNT } from '../src/catalog/recipes';
+import { exclusionReason } from '../src/lib/recipes';
 import { templatesV2 } from '../src/catalog/templates';
 import { toFood, type CatalogFoodItem } from '../src/catalog/load';
 import foodsJson from '../src/catalog/foods.json';
@@ -93,9 +94,18 @@ describe('cataloghi pubblici', () => {
     const ids = new Set(EXERCISE_CATALOG.map((e) => e.id));
     for (const t of templatesV2()) { expect(t.isActive).toBe(false); for (const d of t.days) for (const i of d.items) expect(ids.has(i.exerciseId)).toBe(true); }
   });
-  it('le ricette del catalogo non contengono formaggi etichettati', () => {
-    const cheese = new Set(CAT_FOODS.filter((f) => f.tags.includes('formaggio')).map((f) => f.id));
-    for (const r of CAT_RECIPES.recipes) for (const i of r.ingredients) expect(cheese.has(i.foodId)).toBe(false);
+  it('formaggi ammessi nel catalogo pubblico ma etichettati: l\'esclusione è una preferenza dell\'utente, con eccezioni', () => {
+    // Prima il catalogo escludeva i formaggi per tutti: una preferenza personale imposta a chi scarica l'app.
+    const fMap = new Map(CAT_FOODS.map((f) => [f.id, f]));
+    const withCheese = CAT_RECIPES.recipes.filter((r) => r.ingredients.some((i) => fMap.get(i.foodId)?.tags.includes('formaggio')));
+    expect(withCheese.length).toBeGreaterThan(0);
+    for (const r of withCheese) {
+      expect(exclusionReason(r, fMap, { excludedTags: [], allergies: [] })).toBeNull();
+      expect(exclusionReason(r, fMap, { excludedTags: ['formaggio'], allergies: [] })).toMatch(/formaggio/);
+    }
+    const mozz = CAT_FOODS.find((f) => f.slug === 'mozzarella')!;
+    const panino = CAT_RECIPES.recipes.find((r) => r.id === 'cr_esp_panino_mozz')!;
+    expect(exclusionReason(panino, fMap, { excludedTags: ['formaggio'], allergies: [], allowFoods: [mozz.id] })).toBeNull();
   });
   it('densità solo per liquidi documentati, non 1 per tutti', () => {
     expect(CAT_FOODS.find((f) => f.name.startsWith('Pasta di semola (secca'))!.densityGPerMl).toBeNull();

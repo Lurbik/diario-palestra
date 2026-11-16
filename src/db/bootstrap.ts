@@ -3,7 +3,7 @@
 // Aggiornamento = nessun record dell'utente cancellato; i vecchi seed vengono solo marcati per provenienza.
 import { db, kvGet, kvSet } from './db';
 import { defaultSettings, mergeSettings, type Settings } from './settings';
-import { loadCatalog, upsertCatalog } from '../catalog/load';
+import { loadCatalog, upsertCatalog, retireCatalogItems } from '../catalog/load';
 import { exportAll } from '../lib/backup';
 import { saveSnapshot } from './migrate';
 
@@ -26,17 +26,19 @@ export async function bootstrap(): Promise<{ legacyMarked: number; catalog: stri
 
 async function importCatalog(): Promise<string> {
   const c = await loadCatalog();
-  const cur = await kvGet<number>('catalogVersion', 0);
-  if (cur >= c.version) return `catalogo v${c.version} già presente`;
+  const cur = await kvGet<string>('catalogRelease', '');
+  if (cur === c.release) return `catalogo ${c.release} già presente`;
   const r = await db.transaction('rw', [db.exercises, db.foods, db.recipes, db.programs, db.kv], async () => {
     const e = await upsertCatalog(db.exercises, c.exercises);
     const f = await upsertCatalog(db.foods, c.foods);
     const rc = await upsertCatalog(db.recipes, c.recipes);
     const t = await upsertCatalog(db.programs, c.templates);
+    const retired = await retireCatalogItems(db.recipes, c.retiredRecipes);
     await kvSet('catalogVersion', c.version);
-    return { e, f, rc, t };
+    await kvSet('catalogRelease', c.release);
+    return { e, f, rc, t, retired };
   });
-  return `catalogo v${c.version}: esercizi +${r.e.added}/${r.e.updated}, alimenti +${r.f.added}/${r.f.updated}, ricette +${r.rc.added}/${r.rc.updated}, template +${r.t.added}`;
+  return `catalogo v${c.version}: esercizi +${r.e.added}/${r.e.updated}, alimenti +${r.f.added}/${r.f.updated}, ricette +${r.rc.added}/${r.rc.updated}, template +${r.t.added}/${r.t.updated}, ritirate ${r.retired}`;
 }
 
 /**

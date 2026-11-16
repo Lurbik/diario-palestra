@@ -29,6 +29,10 @@ export interface Profile {
   coolerBag: Answer;               // borsa termica con elementi refrigeranti?
   defaultCookMin: number | null;   // tempo attivo abituale in cucina (min), salvato una volta
   saltyBreakfast?: boolean | null; // preferenza: colazione salata
+  /** tipo di alimentazione (per B12, ferro, proteine vegetali). Vuoto per chi scarica l'app. */
+  diet?: 'onnivora' | 'vegetariana' | 'vegana' | null;
+  /** domande di sicurezza per gli integratori: solo sul dispositivo, mai preimpostate */
+  health?: { pregnant?: boolean; kidney?: boolean; heart?: boolean; meds?: boolean; under18?: boolean; tested?: boolean };
   // Dati usati SOLO se si sceglie la stima da formula
   age: number | null;
   heightCm: number | null;
@@ -86,7 +90,7 @@ const W = (slot: MealSlot, from: string, to: string, enabled = true): MealWindow
 export function emptyProfile(): Profile {
   return {
     name: '', goal: null, experience: null, trainingDaysPerWeek: null, sessionMinutes: null, equipment: null, allergies: [],
-    fridgeAway: null, coolerBag: null, defaultCookMin: null, saltyBreakfast: null, age: null, heightCm: null, sex: null
+    fridgeAway: null, coolerBag: null, defaultCookMin: null, saltyBreakfast: null, diet: null, health: {}, age: null, heightCm: null, sex: null
   };
 }
 

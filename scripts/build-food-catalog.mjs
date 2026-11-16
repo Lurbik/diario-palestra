@@ -135,12 +135,33 @@ const L = [
   ['acqua', 'Acqua', ['acqua'], 'Beverages, water, tap, drinking', 'as_sold', 'bevande', []],
   ['bevanda_soia', 'Bevanda di soia', ['latte di soia'], 'Soymilk, original and vanilla, with added calcium, vitamins A and D', 'as_sold', 'bevande', ['soia']],
   ['cacao_amaro', 'Cacao amaro in polvere', ['cacao'], 'Cocoa, dry powder, unsweetened', 'as_sold', 'dolci', []],
-  ['biscotti_secchi', 'Biscotti secchi', ['biscotti'], 'Cookies, butter, commercially prepared, enriched', 'as_sold', 'dolci', ['glutine', 'latte', 'uova']]
+  ['biscotti_secchi', 'Biscotti secchi', ['biscotti'], 'Cookies, butter, commercially prepared, enriched', 'as_sold', 'dolci', ['glutine', 'latte', 'uova']],
+  // Lotto 2026-11 (proposte editoriali verificate sul dataset: descrizione USDA esatta, valori riletti dalla fonte)
+  ['lamponi', 'Lamponi', ['lamponi'], 'Raspberries, raw', 'raw', 'frutta', []],
+  ['asparagi', 'Asparagi', ['asparago'], 'Asparagus, raw', 'raw', 'verdura', []],
+  ['crusca_avena', 'Crusca d’avena', ['crusca di avena'], 'Oat bran, raw', 'raw', 'cereali', ['glutine_possibile']],
+  ['ananas', 'Ananas', ['ananas'], 'Pineapple, raw, all varieties', 'raw', 'frutta', []],
+  ['barbabietola', 'Barbabietola rossa (cruda)', ['rapa rossa', 'barbabietola'], 'Beets, raw', 'raw', 'verdura', []],
+  ['porri', 'Porri', ['porro'], 'Leeks, (bulb and lower leaf-portion), raw', 'raw', 'verdura', []],
+  ['finocchi', 'Finocchi', ['finocchio'], 'Fennel, bulb, raw', 'raw', 'verdura', []],
+  ['miglio', 'Miglio (secco, crudo)', ['miglio'], 'Millet, raw', 'raw', 'cereali', []],
+  ['pesca', 'Pesca gialla', ['pesche'], 'Peaches, yellow, raw', 'raw', 'frutta', []],
+  ['prugne', 'Prugne fresche', ['susine', 'prugne'], 'Plums, raw', 'raw', 'frutta', []],
+  ['cavolo_rosso', 'Cavolo rosso', ['cavolo cappuccio rosso'], 'Cabbage, red, raw', 'raw', 'verdura', []],
+  ['pistacchi', 'Pistacchi tostati non salati', ['pistacchi'], 'Nuts, pistachio nuts, dry roasted, without salt added', 'as_sold', 'frutta_secca', ['frutta_a_guscio']],
+  ['orzo_perlato', 'Orzo perlato (secco, crudo)', ['orzo'], 'Barley, pearled, raw', 'raw', 'cereali', ['glutine']],
+  ['semi_zucca', 'Semi di zucca sgusciati', ['semi di zucca'], 'Seeds, pumpkin and squash seed kernels, dried', 'as_sold', 'frutta_secca', []],
+  ['grano_saraceno', 'Grano saraceno tostato (secco)', ['grano saraceno', 'kasha'], 'Buckwheat groats, roasted, dry', 'raw', 'cereali', []],
+  ['bulgur', 'Bulgur (secco)', ['bulgur'], 'Bulgur, dry', 'raw', 'cereali', ['glutine']],
+  ['albicocche', 'Albicocche fresche', ['albicocca'], 'Apricots, raw', 'raw', 'frutta', []],
+  ['trota', 'Trota iridea d’allevamento (cruda)', ['trota'], 'Fish, trout, rainbow, farmed, raw', 'raw', 'pesce', ['pesce']],
+  ['farina_ceci', 'Farina di ceci', ['farina di ceci'], 'Chickpea flour (besan)', 'raw', 'legumi', ['legumi']],
+  ['sgombro', 'Sgombro atlantico (crudo)', ['sgombro'], 'Fish, mackerel, Atlantic, raw', 'raw', 'pesce', ['pesce']]
 ];
 
 // Prodotti trasformati: possono contenere allergeni/tracce diversi dal generico → informazione 'sconosciuta'.
 // Alimenti semplici (frutta, verdura, carne, pesce, uova, legumi, frutta secca, cereali in chicco): tag per composizione.
-const PROCESSED = new Set(['pane_bianco', 'pane_integrale', 'tortilla', 'bagel', 'gallette_riso', 'cracker', 'corn_flakes', 'prosciutto_cotto', 'bresaola_manzo_essiccato', 'tonno_olio', 'sardine', 'proteine_siero', 'hummus', 'burro_arachidi', 'cioccolato_fondente', 'marmellata', 'pesto_generico', 'maionese', 'ketchup', 'salsa_soia', 'bevanda_soia', 'biscotti_secchi', 'passata_pomodoro', 'pelati', 'mais_scatola', 'ceci_scatola', 'fagioli_scatola', 'fagioli_neri_scatola', 'tofu', 'yogurt_greco_magro', 'yogurt_bianco_intero', 'mozzarella', 'ricotta', 'parmigiano', 'fiocchi_latte', 'datteri', 'uvetta', 'albicocche_secche', 'anacardi', 'arachidi', 'verdure_miste_surgelate']);
+const PROCESSED = new Set(['pane_bianco', 'pane_integrale', 'tortilla', 'bagel', 'gallette_riso', 'cracker', 'corn_flakes', 'prosciutto_cotto', 'bresaola_manzo_essiccato', 'tonno_olio', 'sardine', 'proteine_siero', 'hummus', 'burro_arachidi', 'cioccolato_fondente', 'marmellata', 'pesto_generico', 'maionese', 'ketchup', 'salsa_soia', 'bevanda_soia', 'biscotti_secchi', 'passata_pomodoro', 'pelati', 'mais_scatola', 'ceci_scatola', 'fagioli_scatola', 'fagioli_neri_scatola', 'tofu', 'yogurt_greco_magro', 'yogurt_bianco_intero', 'mozzarella', 'ricotta', 'parmigiano', 'fiocchi_latte', 'datteri', 'uvetta', 'albicocche_secche', 'anacardi', 'arachidi', 'verdure_miste_surgelate', 'pistacchi', 'semi_zucca', 'farina_ceci', 'crusca_avena']);
 
 const N = { '208': 'kcal', '203': 'protein', '205': 'carbs', '204': 'fat', '291': 'fiber' };
 const out = [];
@@ -167,6 +188,6 @@ for (const [slug, name, syn, desc, state, category, tags, pieceMod] of L) {
   });
 }
 if (missing.length) { console.error('NON TROVATI:\n' + missing.join('\n')); }
-const meta = { catalog: 'foods', version: 3, generatedFrom: file, sourceSha256: sha, count: out.length, license: 'USDA FoodData Central: CC0 1.0 (pubblico dominio)' };
+const meta = { catalog: 'foods', version: 4, generatedFrom: file, sourceSha256: sha, count: out.length, license: 'USDA FoodData Central: CC0 1.0 (pubblico dominio)' };
 writeFileSync('src/catalog/foods.json', JSON.stringify({ meta, items: out }, null, 1));
 console.log(`Scritti ${out.length} alimenti; mancanti ${missing.length}`);

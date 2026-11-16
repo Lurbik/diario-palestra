@@ -1,10 +1,10 @@
 {
  "meta": {
   "catalog": "foods",
-  "version": 3,
+  "version": 4,
   "generatedFrom": "FoodData_Central_sr_legacy_food_json_2021-10-28.json",
   "sourceSha256": "be43d76f9812fef6eb2d5a6ec2a37ec5f0fb5afd0168cfcc2271b0c3640c8e78",
-  "count": 112,
+  "count": 132,
   "license": "USDA FoodData Central: CC0 1.0 (pubblico dominio)"
  },
  "items": [
@@ -3293,6 +3293,583 @@
     "uova"
    ],
    "allergenInfo": "unknown"
+  },
+  {
+   "id": "usda_167755",
+   "slug": "lamponi",
+   "name": "Lamponi",
+   "synonyms": [
+    "lamponi"
+   ],
+   "originalName": "Raspberries, raw",
+   "sourceId": "167755",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 167755 (\"Raspberries, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 52,
+    "protein": 1.2,
+    "carbs": 11.9,
+    "fat": 0.65,
+    "fiber": 6.5
+   },
+   "gramsPerPiece": null,
+   "category": "frutta",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_168389",
+   "slug": "asparagi",
+   "name": "Asparagi",
+   "synonyms": [
+    "asparago"
+   ],
+   "originalName": "Asparagus, raw",
+   "sourceId": "168389",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 168389 (\"Asparagus, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 20,
+    "protein": 2.2,
+    "carbs": 3.88,
+    "fat": 0.12,
+    "fiber": 2.1
+   },
+   "gramsPerPiece": null,
+   "category": "verdura",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_168872",
+   "slug": "crusca_avena",
+   "name": "Crusca d’avena",
+   "synonyms": [
+    "crusca di avena"
+   ],
+   "originalName": "Oat bran, raw",
+   "sourceId": "168872",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 168872 (\"Oat bran, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 246,
+    "protein": 17.3,
+    "carbs": 66.2,
+    "fat": 7.03,
+    "fiber": 15.4
+   },
+   "gramsPerPiece": null,
+   "category": "cereali",
+   "tags": [
+    "glutine_possibile"
+   ],
+   "allergenInfo": "unknown"
+  },
+  {
+   "id": "usda_169124",
+   "slug": "ananas",
+   "name": "Ananas",
+   "synonyms": [
+    "ananas"
+   ],
+   "originalName": "Pineapple, raw, all varieties",
+   "sourceId": "169124",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 169124 (\"Pineapple, raw, all varieties\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 50,
+    "protein": 0.54,
+    "carbs": 13.1,
+    "fat": 0.12,
+    "fiber": 1.4
+   },
+   "gramsPerPiece": null,
+   "category": "frutta",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_169145",
+   "slug": "barbabietola",
+   "name": "Barbabietola rossa (cruda)",
+   "synonyms": [
+    "rapa rossa",
+    "barbabietola"
+   ],
+   "originalName": "Beets, raw",
+   "sourceId": "169145",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 169145 (\"Beets, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 43,
+    "protein": 1.61,
+    "carbs": 9.56,
+    "fat": 0.17,
+    "fiber": 2.8
+   },
+   "gramsPerPiece": null,
+   "category": "verdura",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_169246",
+   "slug": "porri",
+   "name": "Porri",
+   "synonyms": [
+    "porro"
+   ],
+   "originalName": "Leeks, (bulb and lower leaf-portion), raw",
+   "sourceId": "169246",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 169246 (\"Leeks, (bulb and lower leaf-portion), raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 61,
+    "protein": 1.5,
+    "carbs": 14.2,
+    "fat": 0.3,
+    "fiber": 1.8
+   },
+   "gramsPerPiece": null,
+   "category": "verdura",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_169385",
+   "slug": "finocchi",
+   "name": "Finocchi",
+   "synonyms": [
+    "finocchio"
+   ],
+   "originalName": "Fennel, bulb, raw",
+   "sourceId": "169385",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 169385 (\"Fennel, bulb, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 31,
+    "protein": 1.24,
+    "carbs": 7.3,
+    "fat": 0.2,
+    "fiber": 3.1
+   },
+   "gramsPerPiece": null,
+   "category": "verdura",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_169702",
+   "slug": "miglio",
+   "name": "Miglio (secco, crudo)",
+   "synonyms": [
+    "miglio"
+   ],
+   "originalName": "Millet, raw",
+   "sourceId": "169702",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 169702 (\"Millet, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 378,
+    "protein": 11,
+    "carbs": 72.8,
+    "fat": 4.22,
+    "fiber": 8.5
+   },
+   "gramsPerPiece": null,
+   "category": "cereali",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_169928",
+   "slug": "pesca",
+   "name": "Pesca gialla",
+   "synonyms": [
+    "pesche"
+   ],
+   "originalName": "Peaches, yellow, raw",
+   "sourceId": "169928",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 169928 (\"Peaches, yellow, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 39,
+    "protein": 0.91,
+    "carbs": 9.54,
+    "fat": 0.25,
+    "fiber": 1.5
+   },
+   "gramsPerPiece": null,
+   "category": "frutta",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_169949",
+   "slug": "prugne",
+   "name": "Prugne fresche",
+   "synonyms": [
+    "susine",
+    "prugne"
+   ],
+   "originalName": "Plums, raw",
+   "sourceId": "169949",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 169949 (\"Plums, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 46,
+    "protein": 0.7,
+    "carbs": 11.4,
+    "fat": 0.28,
+    "fiber": 1.4
+   },
+   "gramsPerPiece": null,
+   "category": "frutta",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_169977",
+   "slug": "cavolo_rosso",
+   "name": "Cavolo rosso",
+   "synonyms": [
+    "cavolo cappuccio rosso"
+   ],
+   "originalName": "Cabbage, red, raw",
+   "sourceId": "169977",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 169977 (\"Cabbage, red, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 31,
+    "protein": 1.43,
+    "carbs": 7.37,
+    "fat": 0.16,
+    "fiber": 2.1
+   },
+   "gramsPerPiece": null,
+   "category": "verdura",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_170185",
+   "slug": "pistacchi",
+   "name": "Pistacchi tostati non salati",
+   "synonyms": [
+    "pistacchi"
+   ],
+   "originalName": "Nuts, pistachio nuts, dry roasted, without salt added",
+   "sourceId": "170185",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 170185 (\"Nuts, pistachio nuts, dry roasted, without salt added\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "as_sold",
+   "basis": "100g",
+   "per100": {
+    "kcal": 572,
+    "protein": 21,
+    "carbs": 28.3,
+    "fat": 45.8,
+    "fiber": 10.3
+   },
+   "gramsPerPiece": null,
+   "category": "frutta_secca",
+   "tags": [
+    "frutta_a_guscio"
+   ],
+   "allergenInfo": "unknown"
+  },
+  {
+   "id": "usda_170284",
+   "slug": "orzo_perlato",
+   "name": "Orzo perlato (secco, crudo)",
+   "synonyms": [
+    "orzo"
+   ],
+   "originalName": "Barley, pearled, raw",
+   "sourceId": "170284",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 170284 (\"Barley, pearled, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 352,
+    "protein": 9.91,
+    "carbs": 77.7,
+    "fat": 1.16,
+    "fiber": 15.6
+   },
+   "gramsPerPiece": null,
+   "category": "cereali",
+   "tags": [
+    "glutine"
+   ],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_170556",
+   "slug": "semi_zucca",
+   "name": "Semi di zucca sgusciati",
+   "synonyms": [
+    "semi di zucca"
+   ],
+   "originalName": "Seeds, pumpkin and squash seed kernels, dried",
+   "sourceId": "170556",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 170556 (\"Seeds, pumpkin and squash seed kernels, dried\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "as_sold",
+   "basis": "100g",
+   "per100": {
+    "kcal": 559,
+    "protein": 30.2,
+    "carbs": 10.7,
+    "fat": 49,
+    "fiber": 6
+   },
+   "gramsPerPiece": null,
+   "category": "frutta_secca",
+   "tags": [],
+   "allergenInfo": "unknown"
+  },
+  {
+   "id": "usda_170685",
+   "slug": "grano_saraceno",
+   "name": "Grano saraceno tostato (secco)",
+   "synonyms": [
+    "grano saraceno",
+    "kasha"
+   ],
+   "originalName": "Buckwheat groats, roasted, dry",
+   "sourceId": "170685",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 170685 (\"Buckwheat groats, roasted, dry\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 346,
+    "protein": 11.7,
+    "carbs": 75,
+    "fat": 2.71,
+    "fiber": 10.3
+   },
+   "gramsPerPiece": null,
+   "category": "cereali",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_170688",
+   "slug": "bulgur",
+   "name": "Bulgur (secco)",
+   "synonyms": [
+    "bulgur"
+   ],
+   "originalName": "Bulgur, dry",
+   "sourceId": "170688",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 170688 (\"Bulgur, dry\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 342,
+    "protein": 12.3,
+    "carbs": 75.9,
+    "fat": 1.33,
+    "fiber": 12.5
+   },
+   "gramsPerPiece": null,
+   "category": "cereali",
+   "tags": [
+    "glutine"
+   ],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_171697",
+   "slug": "albicocche",
+   "name": "Albicocche fresche",
+   "synonyms": [
+    "albicocca"
+   ],
+   "originalName": "Apricots, raw",
+   "sourceId": "171697",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 171697 (\"Apricots, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 48,
+    "protein": 1.4,
+    "carbs": 11.1,
+    "fat": 0.39,
+    "fiber": 2
+   },
+   "gramsPerPiece": null,
+   "category": "frutta",
+   "tags": [],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_173717",
+   "slug": "trota",
+   "name": "Trota iridea d’allevamento (cruda)",
+   "synonyms": [
+    "trota"
+   ],
+   "originalName": "Fish, trout, rainbow, farmed, raw",
+   "sourceId": "173717",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 173717 (\"Fish, trout, rainbow, farmed, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 141,
+    "protein": 19.9,
+    "carbs": 0,
+    "fat": 6.18,
+    "fiber": 0
+   },
+   "gramsPerPiece": null,
+   "category": "pesce",
+   "tags": [
+    "pesce"
+   ],
+   "allergenInfo": "declared"
+  },
+  {
+   "id": "usda_174288",
+   "slug": "farina_ceci",
+   "name": "Farina di ceci",
+   "synonyms": [
+    "farina di ceci"
+   ],
+   "originalName": "Chickpea flour (besan)",
+   "sourceId": "174288",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 174288 (\"Chickpea flour (besan)\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 387,
+    "protein": 22.4,
+    "carbs": 57.8,
+    "fat": 6.69,
+    "fiber": 10.8
+   },
+   "gramsPerPiece": null,
+   "category": "legumi",
+   "tags": [
+    "legumi"
+   ],
+   "allergenInfo": "unknown"
+  },
+  {
+   "id": "usda_175119",
+   "slug": "sgombro",
+   "name": "Sgombro atlantico (crudo)",
+   "synonyms": [
+    "sgombro"
+   ],
+   "originalName": "Fish, mackerel, Atlantic, raw",
+   "sourceId": "175119",
+   "source": "database",
+   "license": "Pubblico dominio (CC0 1.0) — USDA FoodData Central, SR Legacy 2021-10-28",
+   "sourceNote": "USDA FoodData Central SR Legacy, fdcId 175119 (\"Fish, mackerel, Atlantic, raw\"). Valori generici: per un prodotto specifico usa l'etichetta.",
+   "sourceDate": "2021-10-28",
+   "verified": true,
+   "state": "raw",
+   "basis": "100g",
+   "per100": {
+    "kcal": 205,
+    "protein": 18.6,
+    "carbs": 0,
+    "fat": 13.9,
+    "fiber": 0
+   },
+   "gramsPerPiece": null,
+   "category": "pesce",
+   "tags": [
+    "pesce"
+   ],
+   "allergenInfo": "declared"
   }
  ]
 }

@@ -66,7 +66,7 @@ export function BodyMapTab() {
       <details className="card flat">
         <summary>Elenco accessibile di tutti i muscoli</summary>
         <ul className="list">{ALL_MUSCLES.map((m) => (
-          <li key={m}><button className="listbtn" onClick={() => setSel(m)}><span>{MUSCLE_LABEL[m]} <span className="small muted">({MUSCLE_VIEW[m] === 'front' ? 'davanti' : 'dietro'})</span></span>
+          <li key={m}><button className="listbtn" onClick={() => setSel(m)}><span>{MUSCLE_LABEL[m]} <span className="small muted">({MUSCLE_VIEW[m] === 'front' ? 'davanti' : MUSCLE_VIEW[m] === 'back' ? 'dietro' : 'profondo: solo scheda'})</span></span>
             <span className="small">{view === 'lavoro' ? workLabel(work.get(m)) : view === 'piano' ? `${planned.get(m) ?? 0} serie previste` : `${recentFeel.filter((f) => f.muscle === m).length} segnalazioni`}{focus.includes(m) ? ' · focus' : ''}</span></button></li>
         ))}</ul>
       </details>

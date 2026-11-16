@@ -1,0 +1,1256 @@
+{
+  "formato": "Proposte editoriali 1.0; per lo sviluppo, NON backup Dexie/app",
+  "base": "dec48e9",
+  "provenienza_nutrienti": "USDA FoodData Central SR Legacy CSV, April 2018, CC0; ingredienti preesistenti dal catalogo della repo. Per 100 g di parte edibile, non dati di marca.",
+  "cataloghi_privati": "Nessun carico, peso corporeo o piano personale preconfigurato. Chiedere obiettivi e disponibilità.",
+  "nuovi_alimenti": [
+    {
+      "id": "usda_167755",
+      "slug": "lamponi",
+      "name": "Lamponi crudi",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "167755",
+      "originalName": "Raspberries, raw",
+      "per100": {
+        "kcal": 52.0,
+        "protein": 1.2,
+        "carbs": 11.94,
+        "fat": 0.65,
+        "fiber": 6.5
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/167755/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_168389",
+      "slug": "asparagi",
+      "name": "Asparagi crudi",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "168389",
+      "originalName": "Asparagus, raw",
+      "per100": {
+        "kcal": 20.0,
+        "protein": 2.2,
+        "carbs": 3.88,
+        "fat": 0.12,
+        "fiber": 2.1
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/168389/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_168872",
+      "slug": "crusca_avena",
+      "name": "Crusca d’avena cruda",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "168872",
+      "originalName": "Oat bran, raw",
+      "per100": {
+        "kcal": 246.0,
+        "protein": 17.3,
+        "carbs": 66.22,
+        "fat": 7.03,
+        "fiber": 15.4
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/168872/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_169124",
+      "slug": "ananas",
+      "name": "Ananas fresco",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "169124",
+      "originalName": "Pineapple, raw, all varieties",
+      "per100": {
+        "kcal": 50.0,
+        "protein": 0.54,
+        "carbs": 13.12,
+        "fat": 0.12,
+        "fiber": 1.4
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/169124/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_169145",
+      "slug": "barbabietola",
+      "name": "Barbabietola cruda",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "169145",
+      "originalName": "Beets, raw",
+      "per100": {
+        "kcal": 43.0,
+        "protein": 1.61,
+        "carbs": 9.56,
+        "fat": 0.17,
+        "fiber": 2.8
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/169145/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_169246",
+      "slug": "porri",
+      "name": "Porri crudi",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "169246",
+      "originalName": "Leeks, (bulb and lower leaf-portion), raw",
+      "per100": {
+        "kcal": 61.0,
+        "protein": 1.5,
+        "carbs": 14.15,
+        "fat": 0.3,
+        "fiber": 1.8
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/169246/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_169385",
+      "slug": "finocchi",
+      "name": "Finocchi crudi",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "169385",
+      "originalName": "Fennel, bulb, raw",
+      "per100": {
+        "kcal": 31.0,
+        "protein": 1.24,
+        "carbs": 7.3,
+        "fat": 0.2,
+        "fiber": 3.1
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/169385/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_169702",
+      "slug": "miglio",
+      "name": "Miglio secco",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "169702",
+      "originalName": "Millet, raw",
+      "per100": {
+        "kcal": 378.0,
+        "protein": 11.02,
+        "carbs": 72.85,
+        "fat": 4.22,
+        "fiber": 8.5
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/169702/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_169928",
+      "slug": "pesca",
+      "name": "Pesca gialla fresca",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "169928",
+      "originalName": "Peaches, yellow, raw",
+      "per100": {
+        "kcal": 39.0,
+        "protein": 0.91,
+        "carbs": 9.54,
+        "fat": 0.25,
+        "fiber": 1.5
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/169928/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_169949",
+      "slug": "prugne",
+      "name": "Prugne fresche",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "169949",
+      "originalName": "Plums, raw",
+      "per100": {
+        "kcal": 46.0,
+        "protein": 0.7,
+        "carbs": 11.42,
+        "fat": 0.28,
+        "fiber": 1.4
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/169949/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_169977",
+      "slug": "cavolo_rosso",
+      "name": "Cavolo rosso crudo",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "169977",
+      "originalName": "Cabbage, red, raw",
+      "per100": {
+        "kcal": 31.0,
+        "protein": 1.43,
+        "carbs": 7.37,
+        "fat": 0.16,
+        "fiber": 2.1
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/169977/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_170185",
+      "slug": "pistacchi",
+      "name": "Pistacchi tostati non salati",
+      "state": "as_sold",
+      "basis": "100g",
+      "sourceId": "170185",
+      "originalName": "Nuts, pistachio nuts, dry roasted, without salt added",
+      "per100": {
+        "kcal": 572.0,
+        "protein": 21.05,
+        "carbs": 28.28,
+        "fat": 45.82,
+        "fiber": 10.3
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/170185/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_170284",
+      "slug": "orzo_perlato",
+      "name": "Orzo perlato secco",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "170284",
+      "originalName": "Barley, pearled, raw",
+      "per100": {
+        "kcal": 352.0,
+        "protein": 9.91,
+        "carbs": 77.72,
+        "fat": 1.16,
+        "fiber": 15.6
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/170284/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_170556",
+      "slug": "semi_zucca",
+      "name": "Semi di zucca sgusciati secchi",
+      "state": "as_sold",
+      "basis": "100g",
+      "sourceId": "170556",
+      "originalName": "Seeds, pumpkin and squash seed kernels, dried",
+      "per100": {
+        "kcal": 559.0,
+        "protein": 30.23,
+        "carbs": 10.71,
+        "fat": 49.05,
+        "fiber": 6.0
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/170556/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_170685",
+      "slug": "grano_saraceno",
+      "name": "Grano saraceno tostato secco",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "170685",
+      "originalName": "Buckwheat groats, roasted, dry",
+      "per100": {
+        "kcal": 346.0,
+        "protein": 11.73,
+        "carbs": 74.95,
+        "fat": 2.71,
+        "fiber": 10.3
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/170685/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_170688",
+      "slug": "bulgur",
+      "name": "Bulgur secco",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "170688",
+      "originalName": "Bulgur, dry",
+      "per100": {
+        "kcal": 342.0,
+        "protein": 12.29,
+        "carbs": 75.87,
+        "fat": 1.33,
+        "fiber": 12.5
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/170688/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_171697",
+      "slug": "albicocche",
+      "name": "Albicocche fresche",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "171697",
+      "originalName": "Apricots, raw",
+      "per100": {
+        "kcal": 48.0,
+        "protein": 1.4,
+        "carbs": 11.12,
+        "fat": 0.39,
+        "fiber": 2.0
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/171697/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_173717",
+      "slug": "trota",
+      "name": "Trota iridea di allevamento cruda",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "173717",
+      "originalName": "Fish, trout, rainbow, farmed, raw",
+      "per100": {
+        "kcal": 141.0,
+        "protein": 19.94,
+        "carbs": 0.0,
+        "fat": 6.18,
+        "fiber": 0.0
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/173717/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_174288",
+      "slug": "farina_ceci",
+      "name": "Farina di ceci",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "174288",
+      "originalName": "Chickpea flour (besan)",
+      "per100": {
+        "kcal": 387.0,
+        "protein": 22.39,
+        "carbs": 57.82,
+        "fat": 6.69,
+        "fiber": 10.8
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/174288/nutrients",
+      "license": "CC0"
+    },
+    {
+      "id": "usda_175119",
+      "slug": "sgombro",
+      "name": "Sgombro atlantico crudo",
+      "state": "raw",
+      "basis": "100g",
+      "sourceId": "175119",
+      "originalName": "Fish, mackerel, Atlantic, raw",
+      "per100": {
+        "kcal": 205.0,
+        "protein": 18.6,
+        "carbs": 0.0,
+        "fat": 13.89,
+        "fiber": 0.0
+      },
+      "allergenInfo": "unknown",
+      "fonte": "USDA FoodData Central – SR Legacy, CSV April 2018",
+      "url": "https://fdc.nal.usda.gov/food-details/175119/nutrients",
+      "license": "CC0"
+    }
+  ],
+  "nuove_ricette": [
+    {
+      "id": "esp_panino_mozz",
+      "name": "Panino con mozzarella, pomodoro e rucola",
+      "categoria": "colazione",
+      "porzioni": 1,
+      "ingredienti": [
+        {
+          "foodId": "usda_172688",
+          "grammi": 85,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_170845",
+          "grammi": 60,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_170457",
+          "grammi": 60,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_169387",
+          "grammi": 10,
+          "stato": "raw"
+        }
+      ],
+      "passi": [
+        "Taglia il pomodoro e scola la mozzarella.",
+        "Farcisci il pane e servi."
+      ],
+      "minuti_attivi_stimati": 5,
+      "minuti_totali_stimati": 5,
+      "stima_per_porzione": {
+        "kcal": 406.9,
+        "protein": 24.6,
+        "carbs": 40.4,
+        "fat": 16.4,
+        "fiber": 6.0
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_bruschetta_cannellini",
+      "name": "Bruschette con crema di cannellini e pomodoro",
+      "categoria": "colazione",
+      "porzioni": 1,
+      "ingredienti": [
+        {
+          "foodId": "usda_172688",
+          "grammi": 70,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_175204",
+          "grammi": 75,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_170457",
+          "grammi": 60,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171413",
+          "grammi": 6,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Scola e schiaccia i fagioli con l’olio.",
+        "Tosta il pane e aggiungi la crema e il pomodoro."
+      ],
+      "minuti_attivi_stimati": 5,
+      "minuti_totali_stimati": 8,
+      "stima_per_porzione": {
+        "kcal": 325.7,
+        "protein": 14.7,
+        "carbs": 48.1,
+        "fat": 8.8,
+        "fiber": 8.5
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_piadina_pollo",
+      "name": "Piadina di pollo, peperoni e crema di avocado",
+      "categoria": "pranzo",
+      "porzioni": 1,
+      "ingredienti": [
+        {
+          "foodId": "usda_175037",
+          "grammi": 85,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_171477",
+          "grammi": 100,
+          "stato": "cooked"
+        },
+        {
+          "foodId": "usda_170108",
+          "grammi": 60,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171705",
+          "grammi": 55,
+          "stato": "raw"
+        }
+      ],
+      "passi": [
+        "Taglia il pollo già cotto e i peperoni.",
+        "Schiaccia l’avocado, farcisci e arrotola."
+      ],
+      "minuti_attivi_stimati": 8,
+      "minuti_totali_stimati": 9,
+      "stima_per_porzione": {
+        "kcal": 528.7,
+        "protein": 39.7,
+        "carbs": 50.3,
+        "fat": 18.6,
+        "fiber": 7.9
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_bulgur",
+      "name": "Bulgur con ceci, semi di zucca e limone facoltativo",
+      "categoria": "pranzo",
+      "porzioni": 2,
+      "ingredienti": [
+        {
+          "foodId": "usda_170688",
+          "grammi": 160,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_173800",
+          "grammi": 220,
+          "stato": "drained"
+        },
+        {
+          "foodId": "usda_170556",
+          "grammi": 25,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_169291",
+          "grammi": 200,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171413",
+          "grammi": 15,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Cuoci il bulgur secondo confezione e salta le zucchine.",
+        "Unisci ceci scolati e semi; condisci. Il limone facoltativo non è incluso nel calcolo."
+      ],
+      "minuti_attivi_stimati": 10,
+      "minuti_totali_stimati": 22,
+      "stima_per_porzione": {
+        "kcal": 579.7,
+        "protein": 22.6,
+        "carbs": 89.9,
+        "fat": 18.1,
+        "fiber": 18.8
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_orzo",
+      "name": "Orzo al ragù di tacchino e porro",
+      "categoria": "multiporzione",
+      "porzioni": 4,
+      "ingredienti": [
+        {
+          "foodId": "usda_170284",
+          "grammi": 320,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171098",
+          "grammi": 450,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_169246",
+          "grammi": 180,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_170460",
+          "grammi": 400,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_171413",
+          "grammi": 35,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Cuoci l’orzo secondo confezione.",
+        "Taglia e cuoci il tacchino con porro e passata, poi unisci l’orzo e porziona."
+      ],
+      "minuti_attivi_stimati": 18,
+      "minuti_totali_stimati": 45,
+      "stima_per_porzione": {
+        "kcal": 552.6,
+        "protein": 36.9,
+        "carbs": 77.7,
+        "fat": 11.7,
+        "fiber": 15.2
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_sgombro",
+      "name": "Sgombro al forno con patate e finocchio",
+      "categoria": "cena",
+      "porzioni": 2,
+      "ingredienti": [
+        {
+          "foodId": "usda_175119",
+          "grammi": 300,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_170026",
+          "grammi": 400,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_169385",
+          "grammi": 220,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171413",
+          "grammi": 12,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Cuoci al forno patate e finocchio tagliati sottili.",
+        "Aggiungi i filetti e prosegui fino a cottura; dividi in due piatti."
+      ],
+      "minuti_attivi_stimati": 12,
+      "minuti_totali_stimati": 45,
+      "stima_per_porzione": {
+        "kcal": 548.6,
+        "protein": 33.4,
+        "carbs": 43.0,
+        "fat": 27.2,
+        "fiber": 7.6
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_trota",
+      "name": "Trota con couscous e zucchine",
+      "categoria": "cena",
+      "porzioni": 1,
+      "ingredienti": [
+        {
+          "foodId": "usda_173717",
+          "grammi": 160,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_169699",
+          "grammi": 85,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_169291",
+          "grammi": 140,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171413",
+          "grammi": 8,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Prepara il couscous come da confezione.",
+        "Cuoci il filetto e le zucchine in padella e servi insieme."
+      ],
+      "minuti_attivi_stimati": 12,
+      "minuti_totali_stimati": 22,
+      "stima_per_porzione": {
+        "kcal": 639.7,
+        "protein": 44.5,
+        "carbs": 70.1,
+        "fat": 18.9,
+        "fiber": 5.7
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_crema",
+      "name": "Crema di cannellini e porri con crostini",
+      "categoria": "multiporzione",
+      "porzioni": 4,
+      "ingredienti": [
+        {
+          "foodId": "usda_175204",
+          "grammi": 650,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_169246",
+          "grammi": 250,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_170026",
+          "grammi": 300,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_172688",
+          "grammi": 240,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_171413",
+          "grammi": 30,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Cuoci porro e patate in acqua, aggiungi i fagioli scolati e frulla.",
+        "Prepara i crostini a parte e dividi la crema in quattro porzioni."
+      ],
+      "minuti_attivi_stimati": 14,
+      "minuti_totali_stimati": 40,
+      "stima_per_porzione": {
+        "kcal": 498.6,
+        "protein": 21.7,
+        "carbs": 82.0,
+        "fat": 10.3,
+        "fiber": 14.1
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_cecina",
+      "name": "Frittatina di farina di ceci con spinaci",
+      "categoria": "colazione",
+      "porzioni": 1,
+      "ingredienti": [
+        {
+          "foodId": "usda_174288",
+          "grammi": 65,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_168462",
+          "grammi": 80,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171413",
+          "grammi": 7,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Mescola la farina con acqua fino a ottenere una pastella.",
+        "Salta gli spinaci; unisci la pastella e cuocila bene sui due lati."
+      ],
+      "minuti_attivi_stimati": 10,
+      "minuti_totali_stimati": 18,
+      "stima_per_porzione": {
+        "kcal": 331.8,
+        "protein": 16.8,
+        "carbs": 40.5,
+        "fat": 11.7,
+        "fiber": 8.8
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_riso_uova",
+      "name": "Riso saltato con uova e piselli",
+      "categoria": "cena",
+      "porzioni": 1,
+      "ingredienti": [
+        {
+          "foodId": "usda_168877",
+          "grammi": 85,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171287",
+          "grammi": 110,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_170016",
+          "grammi": 80,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_171413",
+          "grammi": 7,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Cuoci riso e piselli.",
+        "Cuoci le uova in padella, poi unisci il riso e i piselli e servi."
+      ],
+      "minuti_attivi_stimati": 10,
+      "minuti_totali_stimati": 25,
+      "stima_per_porzione": {
+        "kcal": 591.0,
+        "protein": 24.1,
+        "carbs": 79.7,
+        "fat": 18.3,
+        "fiber": 4.7
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_pane_crema",
+      "name": "Pane con crema di arachidi e cacao, pera a parte",
+      "categoria": "spuntino",
+      "porzioni": 1,
+      "ingredienti": [
+        {
+          "foodId": "usda_174924",
+          "grammi": 75,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_172470",
+          "grammi": 22,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_169593",
+          "grammi": 3,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_169118",
+          "grammi": 130,
+          "stato": "raw"
+        }
+      ],
+      "passi": [
+        "Spalma la crema e spolvera il cacao.",
+        "Servi con la pera a parte."
+      ],
+      "minuti_attivi_stimati": 3,
+      "minuti_totali_stimati": 3,
+      "stima_per_porzione": {
+        "kcal": 412.0,
+        "protein": 12.6,
+        "carbs": 63.5,
+        "fat": 14.4,
+        "fiber": 8.3
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    },
+    {
+      "id": "esp_latte",
+      "name": "Latte, banana e crema d’arachidi da bere a casa",
+      "categoria": "spuntino",
+      "porzioni": 1,
+      "ingredienti": [
+        {
+          "foodId": "usda_171265",
+          "grammi": 200,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_173944",
+          "grammi": 100,
+          "stato": "raw"
+        },
+        {
+          "foodId": "usda_172470",
+          "grammi": 18,
+          "stato": "as_sold"
+        },
+        {
+          "foodId": "usda_169593",
+          "grammi": 3,
+          "stato": "as_sold"
+        }
+      ],
+      "passi": [
+        "Pesa il latte e gli altri ingredienti.",
+        "Frulla e servi; regola la consistenza con acqua."
+      ],
+      "minuti_attivi_stimati": 4,
+      "minuti_totali_stimati": 4,
+      "stima_per_porzione": {
+        "kcal": 325.5,
+        "protein": 12.0,
+        "carbs": 38.2,
+        "fat": 16.5,
+        "fiber": 4.6
+      },
+      "ambient": "not_verified",
+      "ammettere_fuori_frigo": false
+    }
+  ],
+  "nuovi_modelli_base": [
+    {
+      "id": "esp_full2",
+      "name": "Full body A/B su 2 giorni",
+      "attrezzatura": "palestra",
+      "giorni": [
+        {
+          "nome": "A",
+          "esercizi": [
+            "cx_leg_press",
+            "cx_chest_press",
+            "cx_lat_larga",
+            "cx_leg_curl_seduto",
+            "cx_alzate_lat_cavo"
+          ]
+        },
+        {
+          "nome": "B",
+          "esercizi": [
+            "cx_hack_squat",
+            "cx_panca_incl_man",
+            "cx_pulley",
+            "cx_rdl_man",
+            "cx_crunch_cavo"
+          ]
+        }
+      ],
+      "personalizzabile": true
+    },
+    {
+      "id": "esp_casa2",
+      "name": "Casa con manubri, 2 giorni",
+      "attrezzatura": "casa_manubri",
+      "giorni": [
+        {
+          "nome": "A",
+          "esercizi": [
+            "cx_goblet_squat",
+            "cx_piegamenti",
+            "cx_rematore_man",
+            "cx_rdl_man",
+            "cx_dead_bug"
+          ]
+        },
+        {
+          "nome": "B",
+          "esercizi": [
+            "cx_affondi",
+            "cx_military_man",
+            "cx_rematore_man",
+            "cx_ponte_glutei",
+            "cx_curl_martello"
+          ]
+        }
+      ],
+      "personalizzabile": true
+    },
+    {
+      "id": "esp_macchine3",
+      "name": "Macchine essenziali, 3 sedute brevi",
+      "attrezzatura": "palestra",
+      "giorni": [
+        {
+          "nome": "A",
+          "esercizi": [
+            "cx_leg_press",
+            "cx_chest_press",
+            "cx_lat_larga"
+          ]
+        },
+        {
+          "nome": "B",
+          "esercizi": [
+            "cx_leg_curl_seduto",
+            "cx_shoulder_press",
+            "cx_pulley"
+          ]
+        },
+        {
+          "nome": "C",
+          "esercizi": [
+            "cx_hack_squat",
+            "cx_chest_press_incl",
+            "cx_row_macchina"
+          ]
+        }
+      ],
+      "personalizzabile": true
+    },
+    {
+      "id": "esp_4breve",
+      "name": "Upper/lower compatto con priorità, 4 giorni",
+      "attrezzatura": "palestra",
+      "giorni": [
+        {
+          "nome": "Upper A",
+          "esercizi": [
+            "cx_chest_press_incl",
+            "cx_lat_larga",
+            "cx_alzate_lat_cavo"
+          ]
+        },
+        {
+          "nome": "Lower A",
+          "esercizi": [
+            "cx_hack_squat",
+            "cx_leg_curl_seduto",
+            "cx_calf_pressa"
+          ]
+        },
+        {
+          "nome": "Upper B",
+          "esercizi": [
+            "cx_panca_incl_mp",
+            "cx_tbar",
+            "cx_reverse_pec"
+          ]
+        },
+        {
+          "nome": "Lower B",
+          "esercizi": [
+            "cx_rdl_bil",
+            "cx_leg_ext",
+            "cx_crunch_cavo"
+          ]
+        }
+      ],
+      "personalizzabile": true
+    },
+    {
+      "id": "esp_5rot",
+      "name": "Cinque sedute in rotazione: torso, gambe A, spalle/braccia, gambe B, upper",
+      "attrezzatura": "palestra",
+      "giorni": [
+        {
+          "nome": "Torso",
+          "esercizi": [
+            "cx_chest_press_incl",
+            "cx_pulldown_unil",
+            "cx_pec_deck",
+            "cx_tbar"
+          ]
+        },
+        {
+          "nome": "Gambe A",
+          "esercizi": [
+            "cx_hack_squat",
+            "cx_leg_curl_seduto",
+            "cx_leg_ext",
+            "cx_calf_pressa",
+            "cx_crunch_allungamento"
+          ]
+        },
+        {
+          "nome": "Spalle e braccia",
+          "esercizi": [
+            "cx_military_mp",
+            "cx_curl_scott",
+            "cx_estensione_cavo_testa",
+            "cx_alzate_lat_panca",
+            "cx_reverse_pec"
+          ]
+        },
+        {
+          "nome": "Gambe B",
+          "esercizi": [
+            "cx_rdl_bil",
+            "cx_leg_ext",
+            "cx_leg_curl_sdraiato",
+            "cx_calf_pressa",
+            "cx_crunch_cavo"
+          ]
+        },
+        {
+          "nome": "Upper",
+          "esercizi": [
+            "cx_panca_incl_mp",
+            "cx_lat_larga",
+            "cx_curl_cavo_bayes",
+            "cx_jm_press_mp",
+            "cx_alzate_lat_man"
+          ]
+        }
+      ],
+      "personalizzabile": true
+    },
+    {
+      "id": "esp_6ppl",
+      "name": "PPL A/B, 6 sedute opzionali",
+      "attrezzatura": "palestra",
+      "giorni": [
+        {
+          "nome": "Push A",
+          "esercizi": [
+            "cx_chest_press_incl",
+            "cx_shoulder_press",
+            "cx_pushdown"
+          ]
+        },
+        {
+          "nome": "Pull A",
+          "esercizi": [
+            "cx_lat_larga",
+            "cx_tbar",
+            "cx_curl_scott"
+          ]
+        },
+        {
+          "nome": "Legs A",
+          "esercizi": [
+            "cx_hack_squat",
+            "cx_leg_curl_seduto",
+            "cx_calf_pressa"
+          ]
+        },
+        {
+          "nome": "Push B",
+          "esercizi": [
+            "cx_chest_press",
+            "cx_alzate_lat_cavo",
+            "cx_estensione_cavo_testa"
+          ]
+        },
+        {
+          "nome": "Pull B",
+          "esercizi": [
+            "cx_pulley",
+            "cx_pulldown_unil",
+            "cx_reverse_pec",
+            "cx_curl_martello"
+          ]
+        },
+        {
+          "nome": "Legs B",
+          "esercizi": [
+            "cx_rdl_man",
+            "cx_leg_press",
+            "cx_leg_ext",
+            "cx_crunch_cavo"
+          ]
+        }
+      ],
+      "personalizzabile": true
+    }
+  ],
+  "nuovi_esercizi_da_redigere": [
+    {
+      "id": "esp_high_row",
+      "nome": "High row alla macchina",
+      "famiglia": "tirata",
+      "nota_editoriale": "Distinguere altezza della presa e macchina dallo storico del pulley."
+    },
+    {
+      "id": "esp_low_row",
+      "nome": "Low row convergente a bracci indipendenti",
+      "famiglia": "tirata",
+      "nota_editoriale": "Annotare lato, sedile e macchina."
+    },
+    {
+      "id": "esp_pullover_man",
+      "nome": "Pullover con manubrio su panca",
+      "famiglia": "tirata",
+      "nota_editoriale": "Registrare un solo manubrio."
+    },
+    {
+      "id": "esp_landmine_press",
+      "nome": "Landmine press a un braccio",
+      "famiglia": "spinta",
+      "nota_editoriale": "Carico dei dischi e configurazione della leva."
+    },
+    {
+      "id": "esp_leg_curl_piedi",
+      "nome": "Leg curl in piedi unilaterale",
+      "famiglia": "gambe",
+      "nota_editoriale": "Salvare destra e sinistra separatamente."
+    },
+    {
+      "id": "esp_split_squat",
+      "nome": "Split squat statico con manubri",
+      "famiglia": "gambe",
+      "nota_editoriale": "Distinto dal bulgaro con piede rialzato."
+    },
+    {
+      "id": "esp_stepup",
+      "nome": "Step-up con manubri",
+      "famiglia": "gambe",
+      "nota_editoriale": "Salvare altezza del rialzo e kg per manubrio."
+    },
+    {
+      "id": "esp_rear_fly_cavo",
+      "nome": "Aperture posteriori ai cavi",
+      "famiglia": "spalle",
+      "nota_editoriale": "Registrare altezza dei cavi e presa."
+    },
+    {
+      "id": "esp_curl_inclinata",
+      "nome": "Curl alternato su panca inclinata",
+      "famiglia": "braccia",
+      "nota_editoriale": "Inclinazione della panca e carico per manubrio."
+    },
+    {
+      "id": "esp_farmer_walk",
+      "nome": "Camminata con manubri",
+      "famiglia": "trasporto",
+      "nota_editoriale": "Distanza o durata, kg per mano: niente progressione a ripetizioni."
+    },
+    {
+      "id": "esp_side_plank",
+      "nome": "Plank laterale",
+      "famiglia": "stabilizzazione",
+      "nota_editoriale": "Secondi per lato anziché ripetizioni."
+    },
+    {
+      "id": "esp_extrarotazione",
+      "nome": "Extrarotazione al cavo a gomito vicino al fianco",
+      "famiglia": "spalla",
+      "nota_editoriale": "Accessorio configurabile; non proporlo come terapia."
+    }
+  ],
+  "nota": "I modelli riportano la selezione per giornata; aggiungere range, durata, vincoli e impostazioni modificabili prima della pubblicazione. Tempi cucina stimati. Conservazione non verificata per queste nuove ricette: nessuna autorizzazione automatica fuori frigo. Non trattare dati allergenici mancanti come assenza."
+}
