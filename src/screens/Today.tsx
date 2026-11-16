@@ -4,7 +4,7 @@ import { db, kvSet } from '../db/db';
 import { Chip, Icon, go, useNow, useSettings, useToast } from '../ui/kit';
 import { CategoryIcon } from '../ui/visuals';
 import { MEAL_LABEL, type DayType } from '../db/settings';
-import { addDays, dateKey, formatDateIt, formatDuration, romeLocalToEpoch, timeHM, weekdayOf, WEEKDAYS } from '../lib/dates';
+import { addDays, dateKey, formatDateIt, formatDuration, timeHM, weekdayOf, WEEKDAYS } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { estimateItemMin, sessionTimes } from '../lib/workout';
 import { planMeals } from '../lib/planner';
@@ -13,6 +13,7 @@ import { isFirm } from '../lib/mealSim';
 import { eatBatchPortion, eatRecipeDirect, ShortfallError } from '../lib/inventory';
 import { shoppingNeeds, rulesFrom } from '../lib/recipes';
 import { planSleep, sleepConflicts, tomorrowWake } from '../lib/sleep';
+import { trainingWindow, trainingStartFor } from '../lib/agenda';
 import { sumNutrients } from '../lib/nutrition';
 import { OnboardingSheet } from './Onboarding';
 import { WeightSheet } from './WeightSheet';
@@ -110,10 +111,18 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
   const toPrepare = tomorrowPlan.map((p) => recipes.find((r) => r.id === p.recipeId)).filter((r): r is Recipe => !!r && r.servings > 1 && !batches.some((b) => b.recipeId === r.id));
   const wake = tomorrowWake(today, settings.sleepPlan.wakeTime, (kvv('wakeOverrides') as Record<string, string | null>) ?? {});
   const sleep = wake.time ? planSleep({ wakeDateKey: wake.dateKey, wakeTime: wake.time, sleepHours: settings.sleepTargetH, latencyMin: settings.sleepPlan.latencyMin, routineMin: settings.sleepPlan.routineMin }) : null;
-  const eveningEnd = dayType === 'palestra_sera' && day && !doneToday ? romeLocalToEpoch(today, '22:00') : null;
-  const conflicts = sleep && eveningEnd ? sleepConflicts(sleep, [{ label: 'Allenamento serale (stima)', endAt: eveningEnd }]) : [];
-
   const est = day ? Math.round(day.items.reduce((a, it) => a + estimateItemMin(it), 0)) : 0;
+  // Orari dall'agenda (facoltativa): fine allenamento + rientro. Senza agenda, nessun orario inventato.
+  const win = day && !doneToday ? trainingWindow(settings.agenda, today, wd, est) : null;
+  const conflicts = sleep && win ? sleepConflicts(sleep, [{ label: `Allenamento (${win.label}) e rientro`, endAt: win.homeAt }]) : [];
+  const tomorrowDay = program?.days.find((d) => d.weekday === weekdayOf(tomorrow)) ?? null;
+  const tomorrowType: DayType = (kvv(`dayType:${tomorrow}`) as DayType) ?? (tomorrowDay ? 'palestra_pomeriggio' : 'riposo');
+  const tomorrowStart = tomorrowDay ? trainingStartFor(settings.agenda, weekdayOf(tomorrow)) : null;
+  const ag = settings.agenda;
+  const tomorrowLine = [
+    tomorrowType === 'universita' ? (ag.awayFrom && ag.awayTo ? `fuori casa ${ag.awayFrom}–${ag.awayTo}` : 'fuori casa') + ` · borsa termica: ${settings.profile.coolerBag === 'si' ? 'sì' : settings.profile.coolerBag === 'no' ? 'no' : 'non indicata'}` : null,
+    tomorrowDay ? `allenamento ${tomorrowDay.name}${tomorrowStart ? ` alle ${tomorrowStart}` : ''}` : null
+  ].filter(Boolean).join(' · ');
 
   return (
     <main className="main">
@@ -178,10 +187,11 @@ export function TodayScreen({ offline }: { offline: { ready: boolean; detail: st
       <section className="hero" aria-labelledby="h-tomorrow">
         <div className="eyebrow" id="h-tomorrow">Per domani</div>
         <ul className="list">
+          {tomorrowLine && <li data-testid="tomorrow-line">Domani: {tomorrowLine}</li>}
           {toPrepare.length > 0 && <li>Prepara: {toPrepare.map((r) => r.name).join(', ')}</li>}
           {needs.length > 0 && <li>Spesa: {needs.slice(0, 4).map((n) => fMap.get(n.foodId)?.name ?? n.foodId).join(', ')}{needs.length > 4 ? ` e altri ${needs.length - 4}` : ''} <a href="#/cibo/spesa">lista</a></li>}
           {sleep ? <li>Sveglia {wake.time} · a letto {sleep.label.bed} · routine serale dalle <strong>{sleep.label.routine}</strong></li> : <li><a href="#/altro/sonno">Imposta la sveglia</a> per calcolare l'orario della routine serale</li>}
-          {!toPrepare.length && !needs.length && <li className="muted">Nulla da preparare o comprare per i pasti pianificati di domani.</li>}
+          {!tomorrowPlan.length ? <li className="muted">Domani non ha ancora pasti pianificati: <a href="#/altro/calendario">pianifica</a>.</li> : !toPrepare.length && !needs.length && <li className="muted">Hai già tutto per i pasti pianificati di domani.</li>}
         </ul>
         {conflicts.map((c) => <p key={c} className="small" style={{ color: 'var(--warn)' }}>{c}</p>)}
       </section>

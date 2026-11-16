@@ -82,11 +82,12 @@ export function proposeCalories(args: {
   lastTargetChange: string | null;
   today: string;
   rules?: CalorieRules;
-  goal?: 'massa' | 'mantenimento' | 'dimagrimento';
+  goal?: 'massa' | 'mantenimento' | 'dimagrimento' | 'solo_diario';
   /** Periodi in cui il peso è poco interpretabile (es. inizio creatina): nessuna modifica se si sovrappongono alla finestra. */
   confounders?: { label: string; from: string; until: string }[];
 }): CalorieProposal {
   const rules = args.rules ?? DEFAULT_CAL_RULES;
+  if (args.goal === 'solo_diario') return { kind: 'no_target', title: 'Solo diario: nessuna proposta', reasons: ['Hai scelto di usare il diario senza obiettivo: l\'app registra e mostra i dati, ma non propone modifiche alle calorie.'], deltaKcal: null, ratePctPerWeek: null };
   const q = dataQuality(args.weights, args.completeDiaryDays, args.today, rules);
   if (args.lastTargetChange && daysBetween(args.lastTargetChange, args.today) < rules.minDaysBetweenChanges) {
     return { kind: 'too_soon', title: 'Target modificato di recente', reasons: [`L'ultimo cambio risale a ${daysBetween(args.lastTargetChange, args.today)} giorni fa: le modifiche sono al massimo una ogni ${rules.minDaysBetweenChanges} giorni.`], deltaKcal: null, ratePctPerWeek: null };
@@ -145,7 +146,7 @@ export function proposeCalories(args: {
  * Ritmi prudenti predefiniti per obiettivo (% del peso a settimana). Scelte operative modificabili,
  * non soglie ottimali dimostrate. Massa usa i valori configurabili nelle impostazioni.
  */
-export function goalRange(goal: 'massa' | 'mantenimento' | 'dimagrimento', rules: CalorieRules): [number, number] {
+export function goalRange(goal: 'massa' | 'mantenimento' | 'dimagrimento' | 'solo_diario', rules: CalorieRules): [number, number] {
   if (goal === 'mantenimento') return [-0.1, 0.1];
   if (goal === 'dimagrimento') return [-0.75, -0.25];
   return [rules.rateMinPct, rules.rateMaxPct];

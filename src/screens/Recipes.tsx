@@ -16,6 +16,8 @@ import { NutrientLine } from './Food';
 import { STATE_LABEL } from './FoodEditor';
 import { WorkSnack, AmbientInfo } from './WorkSnack';
 import { ambientOf } from '../lib/away';
+import { recipeVariants, applyVariant, splitMeal, type Variant } from '../lib/adapt';
+import { GOAL_LABEL } from '../db/settings';
 
 const DEFAULT_FILTER: RecipeFilter = { availability: 'any', maxMissing: 2, maxActiveMin: null, portable: false, eatCold: false, noColdChain: false, expiringFirst: false };
 
@@ -100,6 +102,7 @@ export function RecipeDetail({ id }: { id: string }) {
       <h1>{r.name}</h1>
       <RecipeFeedbackRow id={r.id} />
       <PortionVariants r={r} foods={fMap} />
+      <AdaptPanel r={r} foods={fMap} />
       {(r.seed || r.origin === 'legacy_seed') && <div className="banner info small">Ricetta dimostrativa: quantità adattabili, valori nutrizionali basati su stime non verificate finché non le sostituisci con le etichette.</div>}
       {excl && <div className="banner warn small">Esclusa dai suggerimenti: {excl}</div>}
       <div className="card">
@@ -344,5 +347,53 @@ function PortionVariants({ r, foods }: { r: Recipe; foods: Map<string, Food> }) 
       <strong>Porzioni possibili</strong>
       <ul className="list">{steps.map((k) => { const t = strictTotals(recipeTotals(r, foods, k / r.servings).sum); return <li key={k} className="row between"><span>{k === 1 ? 'Standard' : k < 1 ? 'Più leggera' : 'Più energetica'} ×{fmtNum(k, 2)}</span><span className="num">{t.kcal == null ? 'kcal mancanti' : `${fmtNum(t.kcal, 0)} kcal · ${fmtNum(t.protein, 0)} g prot.`}</span></li>; })}</ul>
     </div>
+  );
+}
+
+/** Adatta la ricetta all'obiettivo: modifiche in grammi, effetto per porzione, differenza di spesa. */
+function AdaptPanel({ r, foods }: { r: Recipe; foods: Map<string, Food> }) {
+  const settings = useSettings();
+  const toast = useToast();
+  const fbRow = useLiveQuery(() => db.kv.get('recipeFeedback'), []);
+  const fb = ((fbRow?.value as Record<string, RecipeFeedback>) ?? {})[r.id];
+  const goal = settings.profile.goal;
+  const vs = recipeVariants(r, foods, goal);
+  const per = strictTotals(recipeTotals(r, foods, 1 / r.servings).sum);
+  const split = r.mealSlots.includes('colazione') && fb?.tooBig ? splitMeal(per.kcal) : null;
+  if (!vs.length && !split) return null;
+  const sign = (n: number | null, u: string) => (n == null ? 'non calcolabile' : `${n >= 0 ? '+' : '−'}${fmtNum(Math.abs(n), 0)} ${u}`);
+  const use = async (v: Variant) => {
+    const copy: Recipe = { ...structuredClone(r), id: uid(), name: `${r.name} (${v.title.toLowerCase()})`, ingredients: applyVariant(r, v), origin: 'user', seed: false, favorite: false, catalogVersion: undefined };
+    await db.recipes.add(copy);
+    toast({ text: 'Creata la tua versione: piano e spesa useranno queste quantità' });
+    go(`cibo/ricetta/${copy.id}`);
+  };
+  return (
+    <details className="card flat" data-testid="adapt" open={goal != null && goal !== 'solo_diario'}>
+      <summary><strong>Adatta all'obiettivo</strong>{goal ? <span className="small muted"> · {GOAL_LABEL[goal]}</span> : null}</summary>
+      {goal === 'solo_diario' && <p className="small muted">Modalità solo diario: le varianti restano disponibili ma non vengono proposte.</p>}
+      {split && (
+        <div className="small" data-testid="adapt-split">
+          <p className="mb0"><strong>Colazione troppo abbondante?</strong> Invece di ridurre l'obiettivo del giorno, dividila: circa {split.nowKcal} kcal a colazione e {split.laterKcal} kcal a metà mattina.</p>
+          <button className="btn sm" onClick={async () => {
+            const d = dateKey();
+            await db.plan.bulkAdd([
+              { id: uid(), dateKey: d, slot: 'colazione', recipeId: r.id, foodId: null, servings: split.nowServings, locked: true, done: false, status: 'confirmed' },
+              { id: uid(), dateKey: d, slot: 'spuntino_mattina', recipeId: r.id, foodId: null, servings: split.laterServings, locked: true, done: false, status: 'confirmed' }
+            ]);
+            toast({ text: 'Divisa tra colazione e metà mattina, solo per oggi' });
+          }}>Dividi solo per oggi</button>
+        </div>
+      )}
+      {vs.map((v) => (
+        <div key={v.kind} className="mt" data-testid={`variant-${v.kind}`}>
+          <div className="row between"><strong className="small">{v.title}</strong><span className="small num">{sign(v.dKcal, 'kcal')} · {sign(v.dProtein, 'g proteine')} a porzione</span></div>
+          <ul className="small mb0">{v.changes.map((c) => <li key={c.foodId}>{c.name}: {fmtNum(c.fromG, 0)} → {fmtNum(c.toG, 0)} g a porzione</li>)}</ul>
+          <p className="small muted mb0">Spesa: {v.extraShoppingG >= 0 ? '+' : '−'}{fmtNum(Math.abs(v.extraShoppingG), 0)} g per l'intera ricetta.</p>
+          <button className="btn sm" onClick={() => use(v)}>Usa questa versione</button>
+        </div>
+      ))}
+      <p className="small muted">Valori ricalcolati dagli ingredienti. Le fonti proteiche non vengono ridotte nella versione meno energetica.</p>
+    </details>
   );
 }

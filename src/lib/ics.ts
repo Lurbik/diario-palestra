@@ -21,8 +21,10 @@ export function buildIcs(events: IcsEvent[], fromDate: string): string {
     const [h, m] = e.start.split(':').map(Number);
     const endMin = h * 60 + m + e.durationMin;
     const ymd = d.replace(/-/g, '');
-    const t = (mins: number) => `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}${String(mins % 60).padStart(2, '0')}00`;
-    lines.push('BEGIN:VEVENT', `UID:${e.uid}@diario-palestra.local`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Europe/Rome:${ymd}T${t(h * 60 + m)}`, `DTEND;TZID=Europe/Rome:${ymd}T${t(Math.min(endMin, 23 * 60 + 59))}`,
+    // Un evento che passa la mezzanotte finisce il giorno dopo (es. 23:30 + 60 min → 00:30 del giorno successivo)
+    const endYmd = addDays(d, Math.floor(endMin / 1440)).replace(/-/g, '');
+    const t = (mins: number) => `${String(Math.floor((mins % 1440) / 60)).padStart(2, '0')}${String(mins % 60).padStart(2, '0')}00`;
+    lines.push('BEGIN:VEVENT', `UID:${e.uid}@diario-palestra.local`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Europe/Rome:${ymd}T${t(h * 60 + m)}`, `DTEND;TZID=Europe/Rome:${endYmd}T${t(endMin)}`,
       `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[e.weekday]}`, `SUMMARY:${esc(e.title)}`, ...(e.description ? [`DESCRIPTION:${esc(e.description)}`] : []), 'END:VEVENT');
   }
   lines.push('END:VCALENDAR');

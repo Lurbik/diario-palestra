@@ -63,8 +63,22 @@ Le domande di sicurezza (reni, cuore o pressione, farmaci, gravidanza, minore et
 - Non propone integratori a chi ha indicato condizioni a rischio, né dosi oltre i limiti EFSA per la caffeina.
 - Non usa percentuali di "attivazione" muscolare non documentate per scegliere gli esercizi.
 
-## 6. Prossime regole da implementare (in ordine)
+## 6. Implementato nel coach, nell'agenda e nel cibo adattivo
 
-1. **Coach allenamento.** Notte molto breve o seduta incompleta: non conta come stallo. Ordine degli esercizi secondo la priorità dichiarata. Proposte "solo oggi" separate da quelle permanenti.
-2. **Cibo adattivo.** Varianti di grammatura con l'effetto su kcal, proteine e spesa; spostare parte della colazione a uno spuntino; ritmo di variazione del peso diverso per obiettivo ed esperienza, se l'utente lo sceglie.
-3. **Revisione settimanale.** Tre dati utilizzabili e una sola proposta modificabile.
+- **Stallo affidabile.** Sedute incomplete, con notte molto breve (meno di 5 ore), con dolore o in modalità «ho meno tempo» sono escluse una per una, con il motivo; non bloccano più tutta la storia. Oltre le 12 ripetizioni si confrontano direttamente carico e ripetizioni, mai uno zero.
+- **Coach.** Le proposte hanno una portata: mantieni, un esercizio, un giorno, tutta la scheda.
+  - Se i giorni disponibili cambiano, propone subito un modello diverso; la scheda vecchia resta salvata.
+  - Una scheda che non entra nella settimana per due settimane apre una proposta.
+  - Un esercizio saltato 3 volte su 4 si può anticipare o rendere facoltativo.
+  - L'età della scheda non conta.
+  - Ogni modifica è annotata con vecchio e nuovo valore, motivo e versione della scheda, ed è annullabile.
+- **Agenda.** Un solo posto per gli orari: Oggi, conflitti con il sonno ed export del calendario. Gli eventi oltre la mezzanotte finiscono il giorno dopo; senza agenda l'app non inventa orari.
+- **Cibo adattivo.** Obiettivi: massa, mantenimento, definizione, solo diario.
+  - Ogni ricetta ha varianti ricalcolate in grammi: più energetica, meno energetica (proteine invariate), più proteica. Ognuna mostra l'effetto su kcal, proteine e spesa.
+  - Una colazione troppo abbondante si divide con lo spuntino, solo per quel giorno.
+
+## 7. Prossimi passi
+
+1. **Atlante anatomico 2D**, poi la demo 3D della spalla. Serve scaricare risorse con licenza CC BY-SA (OpenStax/Wikimedia) o Z-Anatomy: da approvare prima.
+2. **Revisione settimanale**: tre dati utilizzabili e una sola proposta modificabile.
+3. **Cataloghi a lotti** verso le quote (200–300 esercizi e ricette, oltre 1.000 alimenti), con le voci non documentate lasciate in bozza.

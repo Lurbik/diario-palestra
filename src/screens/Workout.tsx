@@ -6,6 +6,7 @@ import { Check, Chip, Field, Icon, NumInput, Sheet, go, useSettings, useToast } 
 import { SessionScreen, SetForm, fromSet, type FormState } from './Session';
 import { updateSet, deleteSet } from '../lib/workout';
 import { ProgramsScreen, ProgramEditor } from './Programs';
+import { CoachCard } from './Coach';
 import { CatalogScreen, ExerciseEditor, MachineEditor } from './Catalog';
 import { ExercisePage } from './ExercisePage';
 import { estimateItemMin, sessionTimes, startSession, discardSession } from '../lib/workout';
@@ -53,7 +54,8 @@ function WorkoutHome() {
     const est = day.items.reduce((a, it) => a + estimateItemMin(it), 0);
     const canReduce = settings.reducedTimePrioritiesConfirmed && day.items.every((it) => it.priority != null);
     if (!reduced || !canReduce || timeLimit == null) return { skip: [], est, canReduce };
-    const byPrio = [...day.items].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
+    // i facoltativi si tolgono per primi
+    const byPrio = [...day.items].sort((a, b) => Number(!!a.optional) - Number(!!b.optional) || (a.priority ?? 99) - (b.priority ?? 99));
     let acc = 0; const keep = new Set<string>();
     for (const it of byPrio) { const m = estimateItemMin(it); if (acc + m <= timeLimit || keep.size === 0) { keep.add(it.id); acc += m; } }
     return { skip: day.items.filter((it) => !keep.has(it.id)).map((it) => it.id), est, canReduce };
@@ -98,7 +100,7 @@ function WorkoutHome() {
                   <ul className="list mt">
                     {day.items.map((it) => (
                       <li key={it.id} className="row between small" style={{ opacity: plan.skip.includes(it.id) ? 0.45 : 1 }}>
-                        <span>{exMap.get(it.exerciseId)?.name ?? it.exerciseId}{plan.skip.includes(it.id) && ' — saltato (tempo ridotto)'}</span>
+                        <span>{exMap.get(it.exerciseId)?.name ?? it.exerciseId}{it.optional ? <span className="muted"> · facoltativo</span> : null}{plan.skip.includes(it.id) && ' — saltato (tempo ridotto)'}</span>
                         <span className="muted nowrap">{it.sets ?? '?'}×{it.repMin ?? '?'}{it.repMax && it.repMax !== it.repMin ? '–' + it.repMax : ''}</span>
                       </li>
                     ))}
@@ -122,6 +124,7 @@ function WorkoutHome() {
           )}
         </div>
       )}
+      {program && !active && <CoachCard program={program} />}
       <div className="card flat">
         <ul className="list">
           <li><a className="listbtn" href="#/allenamento/storico"><span>Storico sedute</span><Icon.right /></a></li>

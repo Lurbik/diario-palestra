@@ -12,7 +12,7 @@ export interface HealthFlags {
 }
 
 export interface SupplementContext {
-  goal: 'massa' | 'mantenimento' | 'dimagrimento' | null;
+  goal: 'massa' | 'mantenimento' | 'dimagrimento' | 'solo_diario' | null;
   diet: 'onnivora' | 'vegetariana' | 'vegana' | null;
   health: HealthFlags;
   /** ultimo peso registrato (kg), null se assente */

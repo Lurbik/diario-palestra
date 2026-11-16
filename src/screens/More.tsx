@@ -8,6 +8,8 @@ import { patchSettings } from '../db/bootstrap';
 import { addDays, dateKey, formatDateIt, weekStart, weekdayOf, WEEKDAYS, WEEKDAYS_SHORT } from '../lib/dates';
 import { fmtNum, uid } from '../lib/id';
 import { planMeals } from '../lib/planner';
+import { trainingStartFor } from '../lib/agenda';
+import { estimateItemMin } from '../lib/workout';
 import { SupplementsScreen } from './Supplements';
 import { isAwaySlot, coldAvailable, awayContextFrom } from '../lib/away';
 import { replaceProposals } from '../lib/planStore';
@@ -91,8 +93,9 @@ function CalendarScreen() {
   };
   const exportIcs = () => {
     const ev = [
-      ...(program?.days.filter((d) => d.weekday).map((d) => ({ uid: `allenamento-${d.id}`, title: `Allenamento: ${d.name}`, weekday: d.weekday!, start: '15:00', durationMin: settings.dailyTimeLimitMin ?? 90, description: 'Orario indicativo: modificalo nel calendario.' })) ?? []),
-      ...settings.prepWeekdays.map((w) => ({ uid: `prep-${w}`, title: 'Preparazione pasti', weekday: w, start: '17:00', durationMin: 60 })),
+      // Stessi orari dell'agenda usata in Oggi e nel sonno; giorni senza orario non vengono esportati con un orario inventato.
+      ...(program?.days.filter((d) => d.weekday && trainingStartFor(settings.agenda, d.weekday)).map((d) => ({ uid: `allenamento-${d.id}`, title: `Allenamento: ${d.name}`, weekday: d.weekday!, start: trainingStartFor(settings.agenda, d.weekday!)!, durationMin: Math.round(d.items.reduce((a, it) => a + estimateItemMin(it), 0)) || 60, description: 'Orario dall\'agenda dell\'app; durata stimata dalla scheda (recuperi inclusi).' })) ?? []),
+      ...(settings.agenda.prepStart ? settings.prepWeekdays.map((w) => ({ uid: `prep-${w}`, title: 'Preparazione pasti', weekday: w, start: settings.agenda.prepStart!, durationMin: settings.agenda.prepMin ?? 60 })) : []),
       ...settings.reminders.filter((r) => r.enabled).flatMap((r) => r.weekdays.map((w) => ({ uid: `${r.id}-${w}`, title: r.label, weekday: w, start: r.time, durationMin: 10 })))
     ];
     downloadText('diario-calendario.ics', buildIcs(ev, dateKey()), 'text/calendar');
@@ -269,6 +272,7 @@ function SettingsScreen() {
             <Chip on={s.profile.coolerBag === 'no'} onClick={() => set({ profile: { ...s.profile, coolerBag: s.profile.coolerBag === 'no' ? null : 'no' } })}>Niente borsa termica</Chip>
           </div>
         </div>
+        <AgendaEditor />
         <NumInput label="Target proteico (g/die)" value={s.proteinTargetG} onChange={(v) => set({ proteinTargetG: v })} decimals={false} />
       </section>
       <section className="card">
@@ -441,6 +445,36 @@ function ExceptionsPicker() {
             {allowed.has(f.id) ? '✓ ' : ''}{f.name}
           </Chip>
         ))}
+      </div>
+    </details>
+  );
+}
+
+/** Agenda facoltativa: un solo posto per gli orari usati da Oggi, sonno ed export calendario. */
+function AgendaEditor() {
+  const s = useSettings();
+  const ag = s.agenda;
+  const program = useLiveQuery(() => db.programs.filter((p) => p.isActive).first(), []);
+  const up = (p: Partial<typeof ag>) => patchSettings({ agenda: { ...ag, ...p } });
+  const t = (v: string) => (v ? v : null);
+  return (
+    <details className="mt" data-testid="agenda">
+      <summary><strong className="small">Agenda della settimana (facoltativa)</strong></summary>
+      <p className="small muted">Gli stessi orari valgono per Oggi, per il sonno e per il file del calendario. Se un impegno passa la mezzanotte finisce il giorno dopo. Senza agenda l'app non inventa orari.</p>
+      <Field label="Di solito mi alleno alle"><input type="time" aria-label="Orario abituale di allenamento" value={ag.trainingStart ?? ''} onChange={(e) => up({ trainingStart: t(e.target.value) })} /></Field>
+      {program?.days.filter((d) => d.weekday).map((d) => (
+        <Field key={d.id} label={`${WEEKDAYS[d.weekday!]} (${d.name}): orario diverso`}>
+          <input type="time" aria-label={`Orario ${WEEKDAYS[d.weekday!]}`} value={ag.trainingByWeekday[String(d.weekday)] ?? ''} onChange={(e) => { const m = { ...ag.trainingByWeekday }; if (e.target.value) m[String(d.weekday)] = e.target.value; else delete m[String(d.weekday)]; up({ trainingByWeekday: m }); }} />
+        </Field>
+      ))}
+      <NumInput label="Minuti per rientrare a casa dopo la palestra" value={ag.commuteMin} onChange={(v) => up({ commuteMin: v })} decimals={false} />
+      <div className="grid2">
+        <Field label="Fuori casa dalle (lavoro/università)"><input type="time" value={ag.awayFrom ?? ''} onChange={(e) => up({ awayFrom: t(e.target.value) })} /></Field>
+        <Field label="alle"><input type="time" value={ag.awayTo ?? ''} onChange={(e) => up({ awayTo: t(e.target.value) })} /></Field>
+      </div>
+      <div className="grid2">
+        <Field label="Preparazione pasti alle"><input type="time" value={ag.prepStart ?? ''} onChange={(e) => up({ prepStart: t(e.target.value) })} /></Field>
+        <NumInput label="per minuti" value={ag.prepMin} onChange={(v) => up({ prepMin: v })} decimals={false} />
       </div>
     </details>
   );

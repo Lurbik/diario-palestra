@@ -110,6 +110,8 @@ export interface ProgramItem {
   /** Priorità per la modalità "tempo ridotto": confermata dall'utente (1 = massima). null = non confermata */
   priority: number | null;
   sameAs: string;             // es. "Come martedì"
+  /** Facoltativo: con "ho meno tempo" si toglie per primo; non conta come seduta incompleta. */
+  optional?: boolean;
 }
 
 export interface ProgramDay {
@@ -127,6 +129,8 @@ export interface Program extends CatalogMeta {
   notes: string;
   days: ProgramDay[];
   createdAt: number;
+  /** Versione della scheda: aumenta a ogni modifica proposta dal coach e accettata. */
+  revision?: number;
 }
 
 export interface SessionItem {

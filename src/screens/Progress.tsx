@@ -1,4 +1,5 @@
 import { weightConfounders } from '../lib/supplements';
+import { sessionContext } from '../lib/coach';
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, kvSet } from '../db/db';
@@ -203,6 +204,9 @@ function TrainingTab() {
   const [detail, setDetail] = useState<{ ex: Exercise; exps: Exposure[] } | null>(null);
   const exMap = new Map(exercises.map((e) => [e.id, e]));
   const done = new Map(sessions.map((s) => [s.id, s]));
+  // Sedute con notte molto breve, dolore o "ho meno tempo": escluse dallo stallo (mai prova contro la scheda)
+  const sleepRows = useLiveQuery(() => db.sleep.toArray(), []) ?? [];
+  const stallCtx = sessionContext(sessions, sleepRows);
   const active = programs.find((p) => p.isActive);
 
   const byConfig = useMemo(() => {
@@ -228,7 +232,7 @@ function TrainingTab() {
     const item = active?.days.flatMap((d) => d.items).find((i) => i.exerciseId === ex.id);
     const mach = machines.find((m) => m.id === ex.machineId);
     const sug = suggestProgression({ exposures: exps, target: { sets: item?.sets ?? null, repMin: item?.repMin ?? null, repMax: item?.repMax ?? null, rirTargets: item?.rirTargets ?? [] }, increments: mach?.increments ?? [], activePain: pain > 0, policy: settings.policy });
-    const stall = detectStall(exps);
+    const stall = detectStall(exps, { context: stallCtx });
     return { ex, exps, sug, stall };
   }).filter(Boolean) as { ex: Exercise; exps: Exposure[]; sug: Suggestion; stall: ReturnType<typeof detectStall> }[];
 

@@ -1,4 +1,5 @@
 import type { MealSlot } from './types';
+import { emptyAgenda, type Agenda } from '../lib/agenda';
 import { DEFAULT_POLICY, type PolicySettings } from '../lib/progression';
 import { DEFAULT_CAL_RULES, type CalorieRules } from '../lib/calories';
 
@@ -13,7 +14,8 @@ export interface MealWindow { slot: MealSlot; from: string; to: string; enabled:
 export interface Reminder { id: string; label: string; time: string; weekdays: number[]; enabled: boolean }
 
 export type Answer = 'si' | 'no' | null;
-export type Goal = 'massa' | 'mantenimento' | 'dimagrimento';
+/** 'dimagrimento' = definizione (id storico mantenuto per compatibilità); 'solo_diario' = nessuna proposta calorica. */
+export type Goal = 'massa' | 'mantenimento' | 'dimagrimento' | 'solo_diario';
 export type Experience = 'principiante' | 'intermedio' | 'esperto';
 export type EquipmentAccess = 'palestra' | 'casa_manubri' | 'corpo_libero';
 
@@ -80,6 +82,8 @@ export interface Settings {
   mealWindows: Record<DayType, MealWindow[]>;
   reminders: Reminder[];
   onboardingDone: boolean;
+  /** Agenda personale facoltativa: orari condivisi da Oggi, sonno, preparazione ed export calendario. */
+  agenda: Agenda;
   prefillConfirmed: boolean;
   assistMode: 'manuale' | 'assistita' | 'automatica';
   profile: Profile;
@@ -117,6 +121,7 @@ export function defaultSettings(): Settings {
     showE1rm: false,
     sleepTargetH: 8,
     sleepPlan: { wakeTime: null, latencyMin: 15, routineMin: 30 },
+    agenda: emptyAgenda(),
     lastBackupAt: null,
     prepWeekdays: [],
     // Finestre organizzative generiche, modificabili: non orari biologicamente obbligatori.
@@ -144,6 +149,7 @@ export function mergeSettings(saved: Partial<Settings> | undefined): Settings {
   return {
     ...d, ...s,
     sleepPlan: { ...d.sleepPlan, ...(s.sleepPlan ?? {}) },
+    agenda: { ...d.agenda, ...(s.agenda ?? {}), trainingByWeekday: { ...(s.agenda?.trainingByWeekday ?? {}) } },
     policy: { ...d.policy, ...(s.policy ?? {}) },
     calorieRules: { ...d.calorieRules, ...(s.calorieRules ?? {}) },
     mealWindows: { ...d.mealWindows, ...(s.mealWindows ?? {}) },
@@ -158,4 +164,4 @@ export const MEAL_ORDER: MealSlot[] = ['colazione', 'spuntino_mattina', 'pranzo'
 export const DAYTYPE_LABEL: Record<DayType, string> = {
   palestra_pomeriggio: 'Allenamento di giorno', palestra_sera: 'Allenamento di sera', riposo: 'Riposo', universita: 'Giornata fuori casa'
 };
-export const GOAL_LABEL: Record<Goal, string> = { massa: 'Aumentare massa', mantenimento: 'Mantenere', dimagrimento: 'Ridurre il grasso' };
+export const GOAL_LABEL: Record<Goal, string> = { massa: 'Massa', mantenimento: 'Mantenimento', dimagrimento: 'Definizione', solo_diario: 'Solo diario, nessun obiettivo' };
