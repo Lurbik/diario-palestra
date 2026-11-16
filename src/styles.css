@@ -324,3 +324,7 @@ table.cmp tr.cur td.today { outline: 3px solid var(--accent-bg); outline-offset:
 .bars .listbtn { display: grid; grid-template-columns: 9.5em 1fr 2.5em; gap: 8px; align-items: center; }
 .bars .bar { height: 10px; background: #e7e1d6; border-radius: 6px; overflow: hidden; }
 .bars .bar i { display: block; height: 100%; background: #c2552e; }
+
+.atlas3d-preview { position: absolute; transform: translateX(-50%); background: #0b1f5cee; color: #fff; padding: 6px 10px; border-radius: 10px; font-size: .9rem; pointer-events: none; max-width: 80%; text-align: center; }
+.atlas3d-choose { border: 2px solid #fbbf24; }
+.atlas3d-choose .chips button { min-height: 44px; }

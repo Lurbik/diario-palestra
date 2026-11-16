@@ -77,6 +77,28 @@ with sync_playwright() as p:
     box = page.get_by_test_id("atlas3d-canvas").bounding_box()
     page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2); page.wait_for_timeout(600)
     check("Tocco al centro dopo rotazione di 90° e centratura: selezionata una porzione del deltoide", re.search(r"atlante/deltoid_", page.url) is not None, page.url)
+    # Strutture piccole: anteprima tenendo il dito fermo, scelta rapida se il punto è conteso
+    page.get_by_role("button", name="Reset").click(); page.wait_for_timeout(300)
+    box = page.get_by_test_id("atlas3d-canvas").bounding_box()
+    px, py = box["x"] + box["width"] * 0.33, box["y"] + box["height"] * 0.50
+    page.mouse.move(px, py); page.mouse.down(); page.wait_for_timeout(450)
+    prev = page.locator(".atlas3d-preview")
+    prev_txt = prev.inner_text() if prev.count() else ""
+    page.mouse.up(); page.wait_for_timeout(300)
+    check("Dito fermo: anteprima con il nome della struttura sotto il dito", len(prev_txt) > 3, prev_txt)
+    found = False
+    for fx, fy in [(0.33, 0.55), (0.32, 0.60), (0.31, 0.62), (0.34, 0.58), (0.30, 0.64), (0.35, 0.53), (0.29, 0.66), (0.67, 0.55), (0.68, 0.60)]:
+        page.mouse.click(box["x"] + box["width"] * fx, box["y"] + box["height"] * fy); page.wait_for_timeout(400)
+        if page.get_by_test_id("atlas3d-choose").count():
+            found = True; break
+    n_opts = page.get_by_test_id("atlas3d-choose").get_by_role("button").count() - 0 if found else 0
+    check("Tocco tra muscoli piccoli e vicini: compare 'Quale intendevi?' con le candidate (max 4)", found and 2 <= n_opts <= 5, f"{n_opts} pulsanti")
+    page.screenshot(path=f"{OUT}/2b-atlante3d-scelta.png", full_page=False)
+    if found:
+        first_name = page.get_by_test_id("atlas3d-choose").locator(".chips button").first.inner_text()
+        page.get_by_test_id("atlas3d-choose").locator(".chips button").first.click(); page.wait_for_timeout(500)
+        card = page.get_by_test_id("atlas3d-card").inner_text() if page.get_by_test_id("atlas3d-card").count() else ""
+        check("Scelta dalla lista rapida: struttura selezionata e centrata", page.get_by_test_id("atlas3d-choose").count() == 0 and re.search(r"atlante/[a-z_]+", page.url) is not None and len(card) > 0, f"{first_name} → {page.url.split('/')[-1]}")
     page.get_by_role("button", name="Isola").click(); page.wait_for_timeout(300)
     page.screenshot(path=f"{OUT}/3-atlante3d-isolato.png", full_page=False)
     page.get_by_role("button", name="Reset").click()

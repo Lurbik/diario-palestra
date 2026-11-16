@@ -38,6 +38,8 @@ export function AtlasHub({ route }: { route: string[] }) {
   const [loadMs, setLoadMs] = useState<number | null>(null);
   const [q, setQ] = useState('');
   const [tab, setTab] = useState<'what' | 'ex' | 'mine'>('what');
+  const [cands, setCands] = useState<MeshInfo[] | null>(null);
+  const nameOf = (m: MeshInfo) => structureByKey(m.key)?.it ?? `${GROUP_IT[m.group] ?? m.group}: ${m.sourceName.replace(/.(l|r)$/, '')}`;
   const ctl = useRef<Atlas3DHandle>(null);
   const abort = useRef<AbortController | null>(null);
   const gl = useMemo(() => webglAvailable(), []);
@@ -61,9 +63,10 @@ export function AtlasHub({ route }: { route: string[] }) {
   const paint = useMemo(() => {
     const m = new Map<string, Paint>();
     if (exParam) { for (const r of rel) if (!m.has(r.key) || r.role === 'principale') m.set(r.key, r.role); return m; }
+    if (cands) { for (const c of cands) m.set(c.key, 'cand'); return m; }
     if (paintMode === 'work') for (const k of new Set(keys.map((x) => x.key))) { const g = groupOf(k, modelGroupOf.get(k)); if (g) m.set(k, `w${binOf(work.get(g)?.direct ?? 0)}` as Paint); }
     return m;
-  }, [exParam, rel, paintMode, keys, work, modelGroupOf]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [exParam, rel, paintMode, keys, work, modelGroupOf, cands]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startDownload = async () => {
     abort.current = new AbortController(); setPack('downloading'); setErr(null); setProgress(0);
@@ -123,8 +126,15 @@ export function AtlasHub({ route }: { route: string[] }) {
             <Chip on={paintMode === 'work'} onClick={() => setPaintMode('work')}>Il mio lavoro (7 giorni)</Chip>
           </div>}
           <Suspense fallback={<p className="muted">Avvio del visualizzatore…</p>}>
-            <Atlas3D ref={ctl} buffer={buffer!} selected={selected} onSelect={(m) => select(m?.key ?? null)} paint={paint} isolate={isolate} reduceMotion={settings.reduceMotion} onReady={(k, ms) => { setKeys(k); setLoadMs(ms); }} />
+            <Atlas3D ref={ctl} buffer={buffer!} selected={selected} onSelect={(m) => { setCands(null); select(m?.key ?? null); }} onAmbiguous={(c) => setCands(c)} nameOf={nameOf} paint={paint} isolate={isolate} reduceMotion={settings.reduceMotion} onReady={(k, ms) => { setKeys(k); setLoadMs(ms); }} />
           </Suspense>
+          {cands && (
+            <section className="card atlas3d-choose" data-testid="atlas3d-choose" aria-live="polite">
+              <strong className="small">Quale intendevi? (in giallo sul modello)</strong>
+              <div className="chips">{cands.map((c) => <button key={c.key} className="btn sm" onClick={() => { setCands(null); select(c.key); setTimeout(() => ctl.current?.center(), 0); }}>{nameOf(c)}</button>)}</div>
+              <button className="linklike small" onClick={() => setCands(null)}>Annulla</button>
+            </section>
+          )}
           <div className="atlas3d-tools" role="toolbar" aria-label="Comandi del modello">
             <button className="btn sm" onClick={() => ctl.current?.view('front')}>Fronte</button>
             <button className="btn sm" onClick={() => ctl.current?.view('back')}>Retro</button>

@@ -6,25 +6,34 @@ import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 're
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { decidePick, sampleOffsets, type Sample } from '../lib/pick3d';
 
-export type Paint = 'principale' | 'secondario' | 'possibile_enfasi' | 'w0' | 'w1' | 'w2' | 'w3';
+export type Paint = 'principale' | 'secondario' | 'possibile_enfasi' | 'w0' | 'w1' | 'w2' | 'w3' | 'cand';
 export interface MeshInfo { key: string; side: string; label: string; group: string; layer: string; sourceName: string }
 export interface Atlas3DHandle { view(v: 'front' | 'back' | 'left' | 'right'): void; rotate(deg: number): void; zoom(f: number): void; center(): void; reset(): void }
 
 const COLORS: Record<Paint | 'base' | 'bone' | 'conn' | 'sel', number> = {
   base: 0xc8826f, bone: 0xebe5d8, conn: 0xd9cdbd, sel: 0x2563eb,
   principale: 0x9c3416, secondario: 0xe39a6d, possibile_enfasi: 0x7c3aed,
-  w0: 0xd8d2c8, w1: 0xf3c9a3, w2: 0xe07a4f, w3: 0x9c3416
+  w0: 0xd8d2c8, w1: 0xf3c9a3, w2: 0xe07a4f, w3: 0x9c3416, cand: 0xfbbf24
 };
+const PREVIEW = 0x93c5fd;
 
 export const Atlas3D = forwardRef<Atlas3DHandle, {
   buffer: ArrayBuffer; selected: string | null; onSelect: (m: MeshInfo | null) => void;
   paint?: Map<string, Paint>; isolate?: boolean; reduceMotion?: boolean; onReady?: (keys: MeshInfo[], ms: number) => void;
-}>(function Atlas3D({ buffer, selected, onSelect, paint, isolate, reduceMotion, onReady }, ref) {
+  /** tocco conteso tra più strutture vicine: chi usa il viewer chiede quale */
+  onAmbiguous?: (cands: MeshInfo[]) => void;
+  /** nome da mostrare nell'anteprima sotto il dito */
+  nameOf?: (m: MeshInfo) => string;
+}>(function Atlas3D({ buffer, selected, onSelect, paint, isolate, reduceMotion, onReady, onAmbiguous, nameOf }, ref) {
   const host = useRef<HTMLDivElement>(null);
   const st = useRef<{ renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls; meshes: THREE.Mesh[]; outlines: THREE.LineSegments[]; render: () => void } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cb = useRef(onSelect); cb.current = onSelect;
+  const amb = useRef(onAmbiguous); amb.current = onAmbiguous;
+  const nm = useRef(nameOf); nm.current = nameOf;
+  const [preview, setPreview] = useState<{ key: string; name: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
     const el = host.current!;
@@ -69,20 +78,48 @@ export const Atlas3D = forwardRef<Atlas3DHandle, {
       onReady?.(infos, Math.round(performance.now() - t0));
     }, (e) => setError(`Modello non leggibile: ${String((e as unknown as { message?: string })?.message ?? e)}`));
 
-    // Tocco = selezione (se il dito non si è spostato); trascinamento = rotazione
-    let down: { x: number; y: number } | null = null;
+    // Tocco = selezione (se il dito non si è spostato); trascinamento = rotazione.
+    // Strutture piccole: si campiona intorno al dito (raggio ~ mezzo polpastrello) e, se il punto è conteso, si chiede quale.
+    let down: { x: number; y: number; t: number } | null = null;
+    let hold: number | undefined;
     const ray = new THREE.Raycaster(); const v = new THREE.Vector2();
-    const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY }; };
-    const onUp = (e: PointerEvent) => {
-      if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) { down = null; return; }
-      down = null;
+    const info = (u: Record<string, string>): MeshInfo => ({ key: u.key, side: u.side, label: u.label, group: u.group, layer: u.layer, sourceName: u.sourceName });
+    const hitAt = (cx: number, cy: number) => {
       const r = renderer.domElement.getBoundingClientRect();
-      v.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      v.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(v, camera);
-      const hit = ray.intersectObjects(meshes.filter((m) => m.visible && m.userData.key), false)[0];
-      const u = hit?.object.userData as Record<string, string> | undefined;
-      cb.current(u?.key ? { key: u.key, side: u.side, label: u.label, group: u.group, layer: u.layer, sourceName: u.sourceName } : null);
+      const h = ray.intersectObjects(meshes.filter((m) => m.visible && m.userData.key), false)[0];
+      return h ? { u: h.object.userData as Record<string, string>, depth: h.distance } : null;
     };
+    const radius = () => Math.max(12, Math.min(22, renderer.domElement.clientWidth / 24));
+    const onDown = (e: PointerEvent) => {
+      down = { x: e.clientX, y: e.clientY, t: Date.now() };
+      window.clearTimeout(hold);
+      // anteprima: dito fermo per un attimo → nome e colore della struttura sotto il dito
+      hold = window.setTimeout(() => {
+        if (!down) return;
+        const h = hitAt(down.x, down.y);
+        if (h?.u.key) { const r = renderer.domElement.getBoundingClientRect(); const mi = info(h.u); setPreview({ key: mi.key, name: nm.current?.(mi) ?? mi.label, x: down.x - r.left, y: down.y - r.top }); }
+      }, 220);
+    };
+    const onMove = (e: PointerEvent) => { if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) { window.clearTimeout(hold); setPreview(null); } };
+    const onUp = (e: PointerEvent) => {
+      window.clearTimeout(hold); setPreview(null);
+      if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) { down = null; return; }
+      const { x, y } = down; down = null;
+      const byKey = new Map<string, Record<string, string>>();
+      const samples: Sample[] = sampleOffsets(radius()).map(([dx, dy], i) => {
+        const h = hitAt(x + dx, y + dy);
+        if (h?.u.key && !byKey.has(h.u.key)) byKey.set(h.u.key, h.u);
+        return { key: h?.u.key ?? null, depth: h?.depth ?? null, center: i === 0 };
+      });
+      const res = decidePick(samples);
+      if (res.kind === 'none') cb.current(null);
+      else if (res.kind === 'select') cb.current(info(byKey.get(res.key)!));
+      else if (amb.current) amb.current(res.keys.map((k) => info(byKey.get(k)!)));
+      else cb.current(info(byKey.get(res.keys[0])!));
+    };
+    renderer.domElement.addEventListener('pointermove', onMove);
     renderer.domElement.addEventListener('pointerdown', onDown);
     renderer.domElement.addEventListener('pointerup', onUp);
     const ro = new ResizeObserver(resize); ro.observe(el);
@@ -102,7 +139,8 @@ export const Atlas3D = forwardRef<Atlas3DHandle, {
       const u = m.userData as Record<string, string>;
       const isSel = !!selected && u.key === selected;
       const p = u.key ? paint?.get(u.key) : undefined;
-      (m.material as THREE.MeshLambertMaterial).color.setHex(isSel ? COLORS.sel : p ? COLORS[p] : COLORS[(u.kind as 'base' | 'bone' | 'conn') ?? 'base']);
+      const isPrev = !!preview && u.key === preview.key && !isSel;
+      (m.material as THREE.MeshLambertMaterial).color.setHex(isSel ? COLORS.sel : isPrev ? PREVIEW : p ? COLORS[p] : COLORS[(u.kind as 'base' | 'bone' | 'conn') ?? 'base']);
       m.visible = !isolate || !selected || isSel || u.kind === 'bone';
       if (isSel) {
         const line = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 35), new THREE.LineBasicMaterial({ color: 0x0b1f5c }));
@@ -151,6 +189,7 @@ export const Atlas3D = forwardRef<Atlas3DHandle, {
   return (
     <div className="atlas3d-wrap">
       <div ref={host} className="atlas3d" data-testid="atlas3d-canvas" />
+      {preview && <div className="atlas3d-preview" style={{ left: preview.x, top: Math.max(4, preview.y - 64) }} aria-live="polite">{preview.name}</div>}
       {error && <p className="small" role="alert">{error}</p>}
     </div>
   );
